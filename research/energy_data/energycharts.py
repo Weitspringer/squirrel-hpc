@@ -8,7 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import requests
 
-from research.energy_data.coefficients import CO2E
+from research.energy_data.coefficients import CO2E, dummy
 
 RESULT_PATH = Path("research") / "data" / "energy-charts"
 API_URL = "https://api.energy-charts.info/public_power"
@@ -33,19 +33,30 @@ def _get_public_power(country: str, timespan: int = 1) -> dict:
         print(f"Country '{country}' has no CO2-eq. coefficients.")
         return response
     minutes_between_datapoints = 15
+    carbon_amount = []
+    produced = []
     carbon_intensities = []
     for production_type in response["production_types"]:
         if production_type["name"] in co2e_coeff.keys():
             for index, prod_mw in enumerate(production_type["data"]):
-                if len(carbon_intensities) < index + 1:
-                    carbon_intensities.append(0)
+                if len(carbon_amount) < index + 1:
+                    carbon_amount.append(0)
+                    produced.append(0)
                 if prod_mw != "null":
-                    carbon_intensities[index] += (
-                        float(prod_mw)
-                        * co2e_coeff[production_type["name"]]
-                        * (minutes_between_datapoints / 60)
+                    kwh_from_source = (
+                        float(prod_mw) * (minutes_between_datapoints / 60) * 1000
                     )
+                    carbon_amount[index] += (
+                        kwh_from_source * co2e_coeff[production_type["name"]]
+                    )
+                    produced[index] += kwh_from_source
+    for index, carbon in enumerate(carbon_amount):
+        if produced[index] != 0:
+            carbon_intensities.append(carbon / produced[index])
+        else:
+            carbon_intensities.append(0)
     plt.plot(carbon_intensities)
+    plt.plot(dummy)
     plt.show()
 
     return response
