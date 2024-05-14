@@ -8,7 +8,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import requests
 
-from research.energy_data.coefficients import CO2E, dummy
+from research.energy_data.coefficients import CO2E
 
 RESULT_PATH = Path("research") / "data" / "energy-charts"
 API_URL = "https://api.energy-charts.info/public_power"
