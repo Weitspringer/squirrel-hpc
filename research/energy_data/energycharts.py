@@ -26,7 +26,7 @@ def _get_public_power(country: str, timespan: int = 1) -> dict:
     url = f"{API_URL}?country={country}&start={start_time}&end={end_time}"
     response = requests.get(url, timeout=120).json()
 
-    # Calculate carbon intensity [CO2-eq./MWh]
+    # Calculate carbon intensity [gCO2-eq./kWh]
     if CO2E.get(country):
         co2e_coeff = CO2E[country]
     else:
