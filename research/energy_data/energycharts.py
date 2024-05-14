@@ -5,41 +5,50 @@ from datetime import timedelta, datetime, UTC
 import json
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import requests
-from tqdm import tqdm
+
+from research.energy_data.coefficients import CO2E, dummy
 
 RESULT_PATH = Path("research") / "data" / "energy-charts"
 API_URL = "https://api.energy-charts.info/public_power"
 TODAY = datetime.now(tz=UTC)
 
 
-def _get_daily_public_power(country: str, timespan: int = 1) -> dict:
-    result = {}
-
-    for days in tqdm(range(0, timespan)):
-        # Get the two days in the past
-        time_delta_start = timedelta(days + 1)
-        time_delta_end = timedelta(days)
-        start_time = (TODAY - time_delta_start).strftime("%Y-%m-%d")
-        end_time = (TODAY - time_delta_end).strftime("%Y-%m-%d")
-        # Query the API and append response content to data
-        url = f"{API_URL}?country={country}&start={start_time}&end={end_time}"
-        response = requests.get(url, timeout=10)
-        daily_public_power = response.json()
-        result.update({start_time: daily_public_power})
-
-    return result
-
-
 def _get_public_power(country: str, timespan: int = 1) -> dict:
+    # Get power generation in MW
+
     # Get the two days in the past
     time_delta = timedelta(timespan)
     start_time = (TODAY - time_delta).strftime("%Y-%m-%d")
     end_time = TODAY.strftime("%Y-%m-%d")
     # Query the API and append response content to data
     url = f"{API_URL}?country={country}&start={start_time}&end={end_time}"
-    response = requests.get(url, timeout=120)
-    return response.json()
+    response = requests.get(url, timeout=120).json()
+
+    # Calculate carbon intensity [CO2-eq./MWh]
+    if CO2E.get(country):
+        co2e_coeff = CO2E[country]
+    else:
+        print(f"Country '{country}' has no CO2-eq. coefficients.")
+        return response
+    minutes_between_datapoints = 15
+    carbon_intensities = []
+    for production_type in response["production_types"]:
+        if production_type["name"] in co2e_coeff.keys():
+            for index, prod_mw in enumerate(production_type["data"]):
+                if len(carbon_intensities) < index + 1:
+                    carbon_intensities.append(0)
+                if prod_mw != "null":
+                    carbon_intensities[index] += (
+                        float(prod_mw)
+                        * co2e_coeff[production_type["name"]]
+                        * (minutes_between_datapoints / 60)
+                    )
+    plt.plot(carbon_intensities)
+    plt.show()
+
+    return response
 
 
 def _save_as_json(power_data: dict, country: str, timespan: int):
@@ -68,21 +77,11 @@ if __name__ == "__main__":
         required=False,
         help="Number of days to request. Default: 1",
     )
-    argument_parser.add_argument(
-        "--daily",
-        action="store_true",
-        help="Set if you want a result with days as keys.",
-    )
     arguments = argument_parser.parse_args()
 
-    if arguments.daily:
-        public_power = _get_daily_public_power(
-            country=arguments.country, timespan=int(arguments.days)
-        )
-    else:
-        public_power = _get_public_power(
-            country=arguments.country, timespan=int(arguments.days)
-        )
+    public_power = _get_public_power(
+        country=arguments.country, timespan=int(arguments.days)
+    )
     _save_as_json(
         power_data=public_power,
         country=arguments.country,
