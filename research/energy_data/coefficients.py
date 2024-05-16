@@ -12,6 +12,7 @@ https://zerowasteeurope.eu/2020/03/understanding-the-carbon-impacts-of-waste-to-
 
 Oil (TBD):
 https://iea.blob.core.windows.net/assets/743af33c-b2f5-4a93-a925-1b08f6438e61/EmissionsfromOilandGasOperationinNetZeroTransitions.pdf
+https://www.umweltbundesamt.de/daten/datensuche/emissionsfaktoren?s=score&d=desc&t=Energie&l=de
 
 """
 
