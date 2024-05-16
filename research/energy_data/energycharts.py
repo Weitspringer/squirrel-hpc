@@ -85,7 +85,7 @@ def _plot_and_compare_carbon_intensity(country: str, response: dict):
                 if len(emmissions_produced) < index + 1:
                     emmissions_produced.append(0)
                     energy_produced.append(0)
-                if prod_mw != "null":
+                if prod_mw != "null" and prod_mw is not None:
                     kwh_from_source = float(prod_mw) * timedeltas[index] * 1000
                     emmissions_produced[index] += (
                         kwh_from_source * co2e_coeff[production_type["name"]]
