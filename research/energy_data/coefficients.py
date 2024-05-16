@@ -4,7 +4,7 @@ of different fuels in power generation of various countries.
 Hydro, geothermal, wind, solar (utility scale), biomass (dedicated), nuclear:
 https://www.ipcc.ch/site/assets/uploads/2018/02/ipcc_wg3_ar5_annex-iii.pdf
 
-Brown coal, hard coal, gas (1% leakage), oil (crude):
+Brown coal, hard coal, gas (1% leakage):
 https://www.volker-quaschning.de/datserv/CO2-spez/index_e.php
 
 Waste:
