@@ -32,5 +32,5 @@ CO2E = {
         "Wind onshore": 11,
         "Solar": 48,
         "Nuclear": 12,
-    }
+    },
 }

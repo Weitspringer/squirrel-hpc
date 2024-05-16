@@ -39,7 +39,7 @@ def get_public_power(country: str, start: datetime, end: datetime) -> dict:
     return requests.get(url, timeout=120).json()
 
 
-def _get_api_carbon_intensity(country: str, start: datetime, end: datetime) -> list:
+def _get_api_carbon_intensity(country: str, start: datetime, end: datetime) -> dict:
 
     # Query the API
     date_fmt = "%Y-%m-%dT%H:%mZ"
@@ -47,7 +47,7 @@ def _get_api_carbon_intensity(country: str, start: datetime, end: datetime) -> l
         "https://api.energy-charts.info/co2eq"
         f"?country={country}&start={start.strftime(date_fmt)}&end={end.strftime(date_fmt)}"
     )
-    return requests.get(url, timeout=120).json()["co2eq"]
+    return requests.get(url, timeout=120).json()
 
 
 def _get_public_power(country: str, timespan: int = 1) -> dict:
@@ -100,18 +100,16 @@ def _plot_and_compare_carbon_intensity(country: str, response: dict):
             carbon_intensities.append(0)
 
     # Get response from API
-    timestamps = response["unix_seconds"]
-    api_carbon_intensities = _get_api_carbon_intensity(
-        country=country,
-        start=datetime.fromtimestamp(timestamps[0], UTC),
-        end=datetime.fromtimestamp(timestamps[-1], UTC),
+    timestamps = list(map(datetime.fromtimestamp, response["unix_seconds"]))
+    api_ci = _get_api_carbon_intensity(
+        country=country, start=timestamps[0], end=timestamps[-1]
     )
-    timestamps = list(map(datetime.fromtimestamp, timestamps))
+    api_ts = list(map(datetime.fromtimestamp, api_ci["unix_seconds"]))
 
     plt.ylabel("Carbon Intensity [gCO2e / kWh]")
     plt.title(f"Grid Carbon Intensity [{country}]")
     plt.plot(timestamps, carbon_intensities, label="Squirrel")
-    plt.plot(timestamps, api_carbon_intensities, label="Energy-Charts")
+    plt.plot(api_ts, api_ci["co2eq"], label="Energy-Charts")
     plt.gcf().autofmt_xdate()
     plt.legend()
     plt.show()
