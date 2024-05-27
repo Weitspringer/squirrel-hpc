@@ -1,36 +1,61 @@
 """Analyze data from internal datacenter."""
 
-from datetime import datetime, timedelta
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 
 
-def _slurm_analysis(start_time: datetime, end_time: datetime, node: str):
-
+def _slurm_analysis(node: str):
+    # Get slurm job data for the node
     slurm_file = Path("research") / "data" / "datalake" / "slurm.csv"
     slurm_df = pd.read_csv(slurm_file)
     slurm_df = slurm_df[slurm_df["Nodelist"] == node]
     slurm_df["Start"] = pd.to_datetime(slurm_df["Start"])
     slurm_df["End"] = pd.to_datetime(slurm_df["End"])
-    time_array = np.arange(start_time, end_time, timedelta(minutes=1)).astype(datetime)
-    active_jobs = [0] * len(time_array)
-    for index, _ in enumerate(active_jobs.copy()):
-        ts = time_array[index]
-        active_jobs[index] = (
-            slurm_df[(slurm_df["Start"] <= ts)].shape[0]
-            - slurm_df[(slurm_df["End"] <= ts)].shape[0]
-        )
+    slurm_df["Duration"] = slurm_df["End"] - slurm_df["Start"]
+    slurm_df = slurm_df[slurm_df["Duration"] >= pd.Timedelta(minutes=10)]
+    slurm_df = slurm_df.reset_index().sort_values(by="Start")
 
-    plt.plot(time_array, active_jobs)
+    # Get node power data
+    node_file = Path("research") / "data" / "datalake" / "power" / f"{node}.csv"
+    node_df = pd.read_csv(node_file)
+    node_df["Time"] = pd.to_datetime(node_df["Time"])
+
+    _, ax = plt.subplots()
+    # Plot power data
+    (p1,) = ax.plot(
+        node_df["Time"],
+        node_df["Power Consumption [W]"],
+        color="C0",
+        alpha=0.5,
+        label="Power consumption",
+    )
+    ax.set(ylabel="Power consumption [W]", xlabel="Time")
+    ax.yaxis.label.set_color(p1.get_color())
+    ax.tick_params(axis="y", colors=p1.get_color())
+
+    # Plot each job on its own unique height
+    twin = ax.twinx()
+    for index, job in slurm_df.iterrows():
+        current_height = index + 1
+        twin.hlines(
+            y=current_height,
+            xmin=job["Start"],
+            xmax=job["End"],
+            linewidth=3,
+            alpha=0.8,
+            color="C1",
+        )
+    twin.set(ylabel="Job ID (Height represents individual jobs)")
+    twin.yaxis.label.set_color("C1")
+    twin.tick_params(axis="y", colors="C1")
+
     plt.gcf().autofmt_xdate()
-    plt.title(f"Number of Jobs on node {node}")
-    plt.ylabel("# jobs")
+    plt.title(f"Power consumption and jobs on node {node}")
+    ax.legend(handles=[p1])
     plt.show()
 
 
 if __name__ == "__main__":
-    NOW = datetime.now()
-    _slurm_analysis(start_time=NOW - timedelta(days=7), end_time=NOW, node="gx02")
+    _slurm_analysis(node="gx02")
