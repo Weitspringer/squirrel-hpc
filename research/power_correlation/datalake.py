@@ -42,6 +42,12 @@ carbon_intensities = get_carbon_intensity(country=country, response=public_power
 ########
 # STATISTICS
 ########
+print(
+    """
+STATISTICS
+########
+      """
+)
 
 # Job duration
 print("Median job duration:", slurm_df["Duration"].median().value / 3.6e12, "hours")
@@ -52,14 +58,33 @@ print(
 )
 
 # Pearson Correlation Coefficient of grid carbon intensity and node power
-node_power_interp = np.interp(
+np_interp_ci = np.interp(
     x=carbon_intensities["unix_seconds"],
     xp=list(map(datetime.timestamp, node_df["Time"])),
     fp=node_df["Power Consumption [W]"],
 )
+print("PCC of grid carbon intensity and node power:")
+print(np.corrcoef(carbon_intensities["data"], np_interp_ci))
+
+# Grid carbon intensity
 print(
-    "PCC of grid carbon intensity and node power:",
-    np.corrcoef(carbon_intensities["data"], node_power_interp),
+    "Median grid carbon intensity during the interval:",
+    np.median(carbon_intensities["data"]),
+)
+ci_interp_sl = np.interp(
+    x=list(map(datetime.timestamp, slurm_df["Start"])),
+    xp=carbon_intensities["unix_seconds"],
+    fp=carbon_intensities["data"],
+)
+print(
+    "Median grid carbon intensity at job start time:",
+    np.median(ci_interp_sl),
+)
+
+print(
+    """
+########
+"""
 )
 
 ########
@@ -106,7 +131,7 @@ ts = list(map(datetime.fromtimestamp, carbon_intensities["unix_seconds"]))
     alpha=0.3,
     label="Grid Carbon Intensity",
 )
-twin2.set(ylabel="g$CO_{2}$-eq./KWh")
+twin2.set(ylabel="g$CO_{2}$-eq./kWh")
 twin2.yaxis.label.set_color("black")
 twin2.tick_params(axis="y", colors="black")
 twin2.spines["right"].set_position(("outward", 60))
