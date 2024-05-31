@@ -23,21 +23,9 @@ def _fetch_carbon_intensity(country: str, start: datetime, end: datetime) -> dic
     return requests.get(url, timeout=120).json()
 
 
-def generate_carbon_intensity_data(
-    country: str, response: dict, end: datetime, timespan: int
-) -> dict:
-    """Generate carbon intensity data using the countrie's coefficients
+def get_carbon_intensity(country: str, response: dict) -> dict:
+    """Generate carbon intensity data using the country's coefficients
     and energy data from Energy-Charts API.
-    Also generates a plot to compare it to the Energy-Charts API result.
-
-    Args:
-        country (str): Country code of location (must be available in Energy-Charts).
-        response (dict): Response from public_power_public_power_get endpoint.
-        end (datetime): Meta-information for file. Most recent day contained in data.
-        timespan (int): Meta-information for filename. Amount of days contained in data.
-
-    Returns:
-        dict: Carbon intensity data.
     """
     # Calculate carbon intensity [gCO2-eq./kWh]
     if CO2E.get(country):
@@ -75,10 +63,29 @@ def generate_carbon_intensity_data(
         else:
             carbon_intensities.append(0)
 
-    carbon_intensity_data = {
+    return {
         "unix_seconds": response["unix_seconds"],
         "data": carbon_intensities,
     }
+
+
+def carbon_intensity_visualization(
+    country: str, response: dict, end: datetime, timespan: int
+) -> dict:
+    """Generates a plot to compare it to the Energy-Charts API result. Also stores the data.
+
+    Args:
+        country (str): Country code of location (must be available in Energy-Charts).
+        response (dict): Response from public_power_public_power_get endpoint.
+        end (datetime): Meta-information for file. Most recent day contained in data.
+        timespan (int): Meta-information for filename. Amount of days contained in data.
+
+    Returns:
+        dict: Carbon intensity data.
+    """
+
+    carbon_intensity_data = get_carbon_intensity(country=country, response=response)
+
     save_dict_as_json(
         data=carbon_intensity_data,
         name=f"{end.strftime('%Y-%m-%d')}_{timespan}_({country})",
@@ -86,9 +93,13 @@ def generate_carbon_intensity_data(
     )
 
     # Get response from API
-    timestamps = list(map(datetime.fromtimestamp, response["unix_seconds"]))
+    timestamps = list(
+        map(datetime.fromtimestamp, carbon_intensity_data["unix_seconds"])
+    )
     _plot_data(
-        country=country, timestamps=timestamps, carbon_intensities=carbon_intensities
+        country=country,
+        timestamps=timestamps,
+        carbon_intensities=carbon_intensity_data["data"],
     )
 
     return carbon_intensity_data

@@ -5,7 +5,7 @@ from datetime import timedelta, datetime, UTC
 
 import requests
 
-from research.carbon_emmissions.energycharts import generate_carbon_intensity_data
+from research.carbon_emmissions.energycharts import carbon_intensity_visualization
 from research.config import RE_ENERGY
 from research.utils.data import save_dict_as_json
 
@@ -25,7 +25,7 @@ def get_public_power(country: str, end: datetime, timespan: int = 1) -> dict:
 
     time_delta = timedelta(timespan)
     start_time = end - time_delta
-    response = _fetch_public_power(country=country, start=start_time, end=end)
+    response = fetch_public_power(country=country, start=start_time, end=end)
 
     save_dict_as_json(
         data=response,
@@ -36,7 +36,7 @@ def get_public_power(country: str, end: datetime, timespan: int = 1) -> dict:
     return response
 
 
-def _fetch_public_power(country: str, start: datetime, end: datetime) -> dict:
+def fetch_public_power(country: str, start: datetime, end: datetime) -> dict:
     """Query Energy-Charts for the public power during the defined timespan.
 
     For more details see:
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     public_power = get_public_power(
         country=arguments.country, timespan=int(arguments.days), end=NOW
     )
-    generate_carbon_intensity_data(
+    carbon_intensity_visualization(
         country=arguments.country,
         response=public_power,
         end=NOW,
