@@ -3,6 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
@@ -79,6 +80,19 @@ twin2.set(ylabel="gCO2-eq./KWh")
 twin2.yaxis.label.set_color("black")
 twin2.tick_params(axis="y", colors="black")
 twin2.spines["right"].set_position(("outward", 60))
+
+# Interpolate node power consumption function
+# to match sample points from carbon intensity
+node_power_interp = np.interp(
+    x=carbon_intensities["unix_seconds"],
+    xp=list(map(datetime.timestamp, node_df["Time"])),
+    fp=node_df["Power Consumption [W]"],
+)
+# Calculate Pearson Correlation Coefficient
+print(
+    "PCC = ",
+    np.corrcoef(carbon_intensities["data"], node_power_interp),
+)
 
 ##### MISC
 plt.gcf().autofmt_xdate()
