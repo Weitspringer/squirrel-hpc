@@ -29,7 +29,7 @@ def get_public_power(country: str, end: datetime, timespan: int = 1) -> dict:
 
     save_dict_as_json(
         data=response,
-        name=f"{end.strftime("%Y-%m-%d")}_{int(timespan)}_({country})",
+        name=f"{end.strftime('%Y-%m-%d')}_{int(timespan)}_({country})",
         folder_path=RE_ENERGY,
     )
 
