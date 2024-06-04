@@ -1,6 +1,5 @@
 """Time utility functions"""
 
-from datetime import datetime
 from typing import Literal
 
 import numpy as np
@@ -29,24 +28,24 @@ def get_timedeltas(
     """
     timedeltas = []
     for index, timestamp in enumerate(unix_seconds):
-        start = datetime.fromtimestamp(timestamp)
+        start = timestamp
         if index == len(unix_seconds) - 1:
             if extend_tail:
                 delta = timedeltas[-1]
             else:
                 break
         else:
-            end = datetime.fromtimestamp(unix_seconds[index + 1])
-            difference = end - start
+            end = unix_seconds[index + 1]
+            difference_seconds = end - start
             match unit:
                 case "days":
-                    delta = difference.seconds / 60 / 60 / 24
+                    delta = difference_seconds / 60 / 60 / 24
                 case "hours":
-                    delta = difference.seconds / 60 / 60
+                    delta = difference_seconds / 60 / 60
                 case "minutes":
-                    delta = difference.seconds / 60
+                    delta = difference_seconds / 60
                 case "seconds":
-                    delta = difference.seconds
+                    delta = difference_seconds
         timedeltas.append(float(delta))
     return timedeltas
 
