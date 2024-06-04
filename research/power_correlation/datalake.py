@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from research.carbon_emmissions.conversion import estimate_carbon_emmissions
 from research.carbon_emmissions.energycharts import get_carbon_intensity
 from research.energy_data.energycharts import fetch_public_power
 
@@ -64,22 +65,30 @@ np_interp_ci = np.interp(
     fp=node_df["Power Consumption [W]"],
 )
 print("PCC of grid carbon intensity and node power:")
-print(np.corrcoef(carbon_intensities["data"], np_interp_ci))
+print(np.corrcoef(carbon_intensities["gco2eq_per_kwh"], np_interp_ci))
 
 # Grid carbon intensity
 print(
     "Median grid carbon intensity during the interval:",
-    np.median(carbon_intensities["data"]),
+    np.median(carbon_intensities["gco2eq_per_kwh"]),
 )
 ci_interp_sl = np.interp(
     x=list(map(datetime.timestamp, slurm_df["Start"])),
     xp=carbon_intensities["unix_seconds"],
-    fp=carbon_intensities["data"],
+    fp=carbon_intensities["gco2eq_per_kwh"],
 )
 print(
     "Median grid carbon intensity at job start time:",
     np.median(ci_interp_sl),
 )
+
+# Calculate carbon emmissions of node
+gco2eq = estimate_carbon_emmissions(
+    power_w=np_interp_ci,
+    gco2eq_per_kwh=carbon_intensities["gco2eq_per_kwh"],
+    unix_seconds=carbon_intensities["unix_seconds"],
+)
+print("Carbon Footprint:", gco2eq / 1000, "kg of CO2-eq.")
 
 print(
     """
@@ -126,7 +135,7 @@ twin2 = ax.twinx()
 ts = list(map(datetime.fromtimestamp, carbon_intensities["unix_seconds"]))
 (p3,) = twin2.plot(
     ts,
-    carbon_intensities["data"],
+    carbon_intensities["gco2eq_per_kwh"],
     color="black",
     alpha=0.3,
     label="Grid Carbon Intensity",
