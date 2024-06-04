@@ -70,7 +70,7 @@ print(np.corrcoef(carbon_intensities["gco2eq_per_kwh"], np_interp_ci))
 # Grid carbon intensity
 print(
     "Median grid carbon intensity during the interval:",
-    np.median(carbon_intensities["gco2eq_per_kwh"]),
+    round(np.median(carbon_intensities["gco2eq_per_kwh"])),
 )
 ci_interp_sl = np.interp(
     x=list(map(datetime.timestamp, slurm_df["Start"])),
@@ -79,7 +79,7 @@ ci_interp_sl = np.interp(
 )
 print(
     "Median grid carbon intensity at job start time:",
-    np.median(ci_interp_sl),
+    round(np.median(ci_interp_sl)),
 )
 
 # Calculate carbon emmissions of node
@@ -88,7 +88,22 @@ gco2eq = estimate_carbon_emmissions(
     gco2eq_per_kwh=carbon_intensities["gco2eq_per_kwh"],
     unix_seconds=carbon_intensities["unix_seconds"],
 )
-print("Carbon Footprint:", gco2eq / 1000, "kg of CO2-eq.")
+kgco2eq = gco2eq / 1000
+print("Carbon Footprint:", round(kgco2eq, 3), "kg of CO2")
+train_factor = 0.033
+footprint_travel = kgco2eq / train_factor
+print("That equals travelling", round(footprint_travel), "km with train in Sweden!")
+sum_duration_minutes = slurm_df["Duration"].sum().seconds / 60
+km_per_minute_runtime = footprint_travel / sum_duration_minutes
+print(
+    "Distance travelled per minute of job runtime: ",
+    round(km_per_minute_runtime, 2),
+    f"km ({round(km_per_minute_runtime * 60, 2)} km/h)",
+)
+print("Lower speed is better.")
+
+num_jobs = slurm_df.shape[0]
+
 
 print(
     """
