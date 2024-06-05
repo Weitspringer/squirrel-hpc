@@ -19,7 +19,7 @@ from research.energy_data.energycharts import fetch_public_power
 node = "gx02"
 country = "de"
 root_folder = Path("research") / "data" / "datalake"
-slurm_file = root_folder / "slurm.csv"
+slurm_file = root_folder / "slurm" / "slurm.csv"
 slurm_df = pd.read_csv(slurm_file)
 slurm_df = slurm_df[slurm_df["Nodelist"] == node]
 slurm_df["Start"] = pd.to_datetime(slurm_df["Start"])
@@ -89,10 +89,14 @@ gco2eq = estimate_carbon_emmissions(
     unix_seconds=carbon_intensities["unix_seconds"],
 )
 kgco2eq = gco2eq / 1000
-print("Carbon Footprint:", round(kgco2eq, 3), "kg of CO2")
+print("\nCarbon Footprint:", round(kgco2eq, 3), "kg of CO2")
 train_factor = 0.033
 footprint_travel = kgco2eq / train_factor
-print("That equals travelling", round(footprint_travel), "km with train in Sweden!")
+print(
+    "That equals one person travelling",
+    round(footprint_travel),
+    "km with train in Sweden!",
+)
 sum_duration_minutes = slurm_df["Duration"].sum().seconds / 60
 km_per_minute_runtime = footprint_travel / sum_duration_minutes
 print(
