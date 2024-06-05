@@ -1,4 +1,5 @@
 **/data/**/*.json
+!**/data/**/schema.json
 **/data/**/*.csv
 **/data/**/*.svg
 **/data/**/*.png
