@@ -5,7 +5,7 @@ from datetime import timedelta, datetime, UTC
 
 import requests
 
-from research.carbon_emmissions.energycharts import carbon_intensity_visualization
+from research.carbon_emmissions.energycharts import generate_carbon_intensities
 from research.config import RE_ENERGY
 from research.utils.data import save_dict_as_json
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     public_power = get_public_power(
         country=arguments.country, timespan=int(arguments.days), end=NOW
     )
-    carbon_intensity_visualization(
+    generate_carbon_intensities(
         country=arguments.country,
         response=public_power,
         end=NOW,

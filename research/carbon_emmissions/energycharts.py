@@ -8,19 +8,7 @@ import requests
 from research.carbon_emmissions.coefficients import CO2E
 from research.config import RE_CARBON
 from research.utils.data import save_dict_as_json
-from research.utils.time import get_timedeltas_in_minutes
-
-
-def _fetch_carbon_intensity(country: str, start: datetime, end: datetime) -> dict:
-    """Get the carbon intensity as API response."""
-
-    # Query the API
-    date_fmt = "%Y-%m-%dT%H:%mZ"
-    url = (
-        "https://api.energy-charts.info/co2eq"
-        f"?country={country}&start={start.strftime(date_fmt)}&end={end.strftime(date_fmt)}"
-    )
-    return requests.get(url, timeout=120).json()
+from research.utils.time import get_timedeltas
 
 
 def get_carbon_intensity(country: str, response: dict) -> dict:
@@ -35,7 +23,9 @@ def get_carbon_intensity(country: str, response: dict) -> dict:
         return None
 
     # Get lengths between timestamps
-    timedeltas = get_timedeltas_in_minutes(response["unix_seconds"])
+    timedeltas = get_timedeltas(
+        unix_seconds=response["unix_seconds"], unit="minutes", extend_tail=True
+    )
 
     # Get amount of energy and emmissions produced during timeslots
     emmissions_produced = []
@@ -65,12 +55,16 @@ def get_carbon_intensity(country: str, response: dict) -> dict:
 
     return {
         "unix_seconds": response["unix_seconds"],
-        "data": carbon_intensities,
+        "gco2eq_per_kwh": carbon_intensities,
     }
 
 
-def carbon_intensity_visualization(
-    country: str, response: dict, end: datetime, timespan: int
+def generate_carbon_intensities(
+    country: str,
+    response: dict,
+    end: datetime,
+    timespan: int,
+    compare_with_api: bool = True,
 ) -> dict:
     """Generates a plot to compare it to the Energy-Charts API result. Also stores the data.
 
@@ -84,25 +78,38 @@ def carbon_intensity_visualization(
         dict: Carbon intensity data.
     """
 
-    carbon_intensity_data = get_carbon_intensity(country=country, response=response)
+    carbon_intensities = get_carbon_intensity(country=country, response=response)
 
     save_dict_as_json(
-        data=carbon_intensity_data,
+        data=carbon_intensities,
         name=f"{end.strftime('%Y-%m-%d')}_{timespan}_({country})",
         folder_path=RE_CARBON,
     )
 
-    # Get response from API
-    timestamps = list(
-        map(datetime.fromtimestamp, carbon_intensity_data["unix_seconds"])
-    )
-    _plot_data(
-        country=country,
-        timestamps=timestamps,
-        carbon_intensities=carbon_intensity_data["data"],
-    )
+    if compare_with_api:
+        # Get response from API for comparison
+        timestamps = list(
+            map(datetime.fromtimestamp, carbon_intensities["unix_seconds"])
+        )
+        _plot_data(
+            country=country,
+            timestamps=timestamps,
+            carbon_intensities=carbon_intensities["gco2eq_per_kwh"],
+        )
 
-    return carbon_intensity_data
+    return carbon_intensities
+
+
+def _fetch_carbon_intensity(country: str, start: datetime, end: datetime) -> dict:
+    """Get the carbon intensity as API response."""
+
+    # Query the API
+    date_fmt = "%Y-%m-%dT%H:%mZ"
+    url = (
+        "https://api.energy-charts.info/co2eq"
+        f"?country={country}&start={start.strftime(date_fmt)}&end={end.strftime(date_fmt)}"
+    )
+    return requests.get(url, timeout=120).json()
 
 
 def _plot_data(

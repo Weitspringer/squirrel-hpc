@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from research.carbon_emmissions.conversion import estimate_carbon_emmissions
 from research.carbon_emmissions.energycharts import get_carbon_intensity
 from research.energy_data.energycharts import fetch_public_power
 
@@ -18,7 +19,7 @@ from research.energy_data.energycharts import fetch_public_power
 node = "gx02"
 country = "de"
 root_folder = Path("research") / "data" / "datalake"
-slurm_file = root_folder / "slurm.csv"
+slurm_file = root_folder / "slurm" / "slurm.csv"
 slurm_df = pd.read_csv(slurm_file)
 slurm_df = slurm_df[slurm_df["Nodelist"] == node]
 slurm_df["Start"] = pd.to_datetime(slurm_df["Start"])
@@ -64,22 +65,49 @@ np_interp_ci = np.interp(
     fp=node_df["Power Consumption [W]"],
 )
 print("PCC of grid carbon intensity and node power:")
-print(np.corrcoef(carbon_intensities["data"], np_interp_ci))
+print(np.corrcoef(carbon_intensities["gco2eq_per_kwh"], np_interp_ci))
 
 # Grid carbon intensity
 print(
     "Median grid carbon intensity during the interval:",
-    np.median(carbon_intensities["data"]),
+    round(np.median(carbon_intensities["gco2eq_per_kwh"])),
 )
 ci_interp_sl = np.interp(
     x=list(map(datetime.timestamp, slurm_df["Start"])),
     xp=carbon_intensities["unix_seconds"],
-    fp=carbon_intensities["data"],
+    fp=carbon_intensities["gco2eq_per_kwh"],
 )
 print(
     "Median grid carbon intensity at job start time:",
-    np.median(ci_interp_sl),
+    round(np.median(ci_interp_sl)),
 )
+
+# Calculate carbon emmissions of node
+gco2eq = estimate_carbon_emmissions(
+    power_w=np_interp_ci,
+    gco2eq_per_kwh=carbon_intensities["gco2eq_per_kwh"],
+    unix_seconds=carbon_intensities["unix_seconds"],
+)
+kgco2eq = gco2eq / 1000
+print("\nCarbon Footprint:", round(kgco2eq, 3), "kg of CO2")
+train_factor = 0.033
+footprint_travel = kgco2eq / train_factor
+print(
+    "That equals one person travelling",
+    round(footprint_travel),
+    "km with train in Sweden!",
+)
+sum_duration_minutes = slurm_df["Duration"].sum().seconds / 60
+km_per_minute_runtime = footprint_travel / sum_duration_minutes
+print(
+    "Distance travelled per minute of job runtime: ",
+    round(km_per_minute_runtime, 2),
+    f"km ({round(km_per_minute_runtime * 60, 2)} km/h)",
+)
+print("Lower speed is better.")
+
+num_jobs = slurm_df.shape[0]
+
 
 print(
     """
@@ -126,7 +154,7 @@ twin2 = ax.twinx()
 ts = list(map(datetime.fromtimestamp, carbon_intensities["unix_seconds"]))
 (p3,) = twin2.plot(
     ts,
-    carbon_intensities["data"],
+    carbon_intensities["gco2eq_per_kwh"],
     color="black",
     alpha=0.3,
     label="Grid Carbon Intensity",

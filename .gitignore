@@ -1,4 +1,9 @@
-**/data/*
-!**/data/.gitkeep
+**/data/**/*.json
+!**/data/**/schema.json
+**/data/**/*.csv
+**/data/**/*.svg
+**/data/**/*.png
+**/data/**/*.jpeg
+**/data/**/*.jpg
 .venv/
 __pycache__
