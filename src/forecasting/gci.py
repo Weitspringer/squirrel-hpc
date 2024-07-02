@@ -32,6 +32,8 @@ def forecast_gci(data: pd.DataFrame, days: int = 1, lookback: int = 2) -> pd.Dat
         forecast(data, days=1, lookback=2)
     """
     latest_ts = data["time"].max()
+    data.bfill()
+    data.ffill()
     forecast_times = pd.date_range(
         start=latest_ts + timedelta(hours=1),
         periods=days * 24,

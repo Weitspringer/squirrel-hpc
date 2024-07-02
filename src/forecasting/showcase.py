@@ -1,8 +1,7 @@
 """Experiment for GCI forecasting"""
 
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 import os
-from pathlib import Path
 import sys
 import time
 
@@ -101,8 +100,8 @@ def _evaluate_forecast(forecast: pd.DataFrame, ground_truth: pd.DataFrame):
 
 def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    stop = datetime.now(tz=UTC).replace(minute=0, second=0, microsecond=0)
-    start = stop - timedelta(days=12, hours=1)
+    stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
+    start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
         gci_data=get_gci_data(url=URL, token=TOKEN, org=ORG, start=start, stop=stop),
         forecast_days=forecast_days,
@@ -163,9 +162,8 @@ def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
 def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     """Evaluate forecasting with different parameters."""
     FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    days = 120
-    stop = datetime.now(tz=UTC).replace(minute=0, second=0, microsecond=0)
-    start = stop - timedelta(days=days, hours=1)
+    stop = datetime.fromisoformat("2023-12-31T23:00:00Z")
+    start = datetime.fromisoformat("2023-01-01T00:00:00Z")
     all_pcc = []
     all_rmse = []
     all_calc = []
