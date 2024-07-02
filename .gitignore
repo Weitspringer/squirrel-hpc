@@ -1,3 +1,8 @@
+# Python
+.venv/
+__pycache__
+
+# Data directories
 **/data/**/*.json
 !**/data/**/schema.json
 **/data/**/*.csv
@@ -5,5 +10,9 @@
 **/data/**/*.png
 **/data/**/*.jpeg
 **/data/**/*.jpg
-.venv/
-__pycache__
+
+# Visualizations
+viz/**/*.png
+viz/**/*.jpeg
+viz/**/*.jpg
+viz/**/*.svg

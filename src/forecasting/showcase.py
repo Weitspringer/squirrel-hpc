@@ -1,61 +1,28 @@
 """Experiment for GCI forecasting"""
 
 from datetime import datetime, timedelta, UTC
+import os
+from pathlib import Path
 import sys
 import time
 
-from influxdb_client import InfluxDBClient
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 
-TOKEN = ""
-ORG = ""
-URL = ""
+from src.config.local_paths import VIZ_DIRECTORY
+from src.db.influxdb import get_gci_data
+from src.forecasting.gci import forecast_gci
+
+TOKEN = os.environ.get("SQUIRREL_INFLUX_TOKEN")
+ORG = os.environ.get("SQUIRREL_INFLUX_ORG")
+URL = os.environ.get("SQUIRREL_INFLUX_URL")
+FC_VIZ_DIRECTORY = VIZ_DIRECTORY / "forecasting"
 
 
-def _get_gci_data(start: datetime, stop: datetime):
-    """Get GCI data from InfluxDB"""
-    client = InfluxDBClient(url=URL, token=TOKEN, org=ORG)
-    start = start.astimezone(tz=UTC)
-    stop = stop.astimezone(tz=UTC)
-    query = f"""
-    from(bucket: "gci_trace")
-    |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, stop: {stop.strftime("%Y-%m-%dT%H:%M:%SZ")})
-    |> filter(fn: (r) => r["_measurement"] == "emaps")
-    |> filter(fn: (r) => r["_field"] == "g_co2eq_per_kWh")
-    |> filter(fn: (r) => r["zone"] == "DE")
-    |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
-    """
-    gci_data = client.query_api().query_data_frame(query=query, org=ORG)
-    gci_data = gci_data[["_time", "g_co2eq_per_kWh"]].rename(
-        columns={"_time": "time", "g_co2eq_per_kWh": "gci"}
-    )
-    return gci_data
-
-
-def _forecast(data: pd.DataFrame, days: int = 1, lookback: int = 2) -> pd.DataFrame:
-    latest_ts = data["time"].max()
-    forecast_times = pd.date_range(
-        start=latest_ts + timedelta(hours=1),
-        periods=days * 24,
-        freq="h",
-        tz="UTC",
-    )
-    forecast = []
-    for time_point in forecast_times:
-        points = []
-        for day_offset in range(1, lookback + 1):
-            past_time_point = time_point - timedelta(days=day_offset)
-            if past_time_point < latest_ts:
-                points.append(data[data["time"] == past_time_point]["gci"].values[0])
-            else:
-                for fc_point in forecast:
-                    if fc_point["time"] == past_time_point:
-                        points.append(fc_point["gci"])
-        forecast.append({"time": time_point, "gci": np.median(points)})
-    return pd.DataFrame(forecast)
+def _demo():
+    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
 
 
 def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
@@ -83,7 +50,7 @@ def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_day
         window = gci_hist[gci_hist["time"] >= lookback_point]
         # Execute forecast
         tic = time.perf_counter()
-        forecast = _forecast(data=window, days=forecast_days, lookback=lookback_days)
+        forecast = forecast_gci(data=window, days=forecast_days, lookback=lookback_days)
         toc = time.perf_counter()
         # Evaluate
         rmse, pcc = _evaluate_forecast(forecast=forecast, ground_truth=gci_data)
@@ -133,10 +100,11 @@ def _evaluate_forecast(forecast: pd.DataFrame, ground_truth: pd.DataFrame):
 
 
 def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
+    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.now(tz=UTC).replace(minute=0, second=0, microsecond=0)
     start = stop - timedelta(days=12, hours=1)
     gci_hist, forecasts, metrics = _simulate_forecasts(
-        gci_data=_get_gci_data(start=start, stop=stop),
+        gci_data=get_gci_data(url=URL, token=TOKEN, org=ORG, start=start, stop=stop),
         forecast_days=forecast_days,
         lookback_days=lookback_days,
     )
@@ -189,10 +157,12 @@ def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     # Tight layout and display plot
     plt.xticks(rotation=45)
     plt.tight_layout()
-    plt.show()
+    plt.savefig(FC_VIZ_DIRECTORY / "simulation.png")
 
 
-def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
+def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
+    """Evaluate forecasting with different parameters."""
+    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     days = 120
     stop = datetime.now(tz=UTC).replace(minute=0, second=0, microsecond=0)
     start = stop - timedelta(days=days, hours=1)
@@ -205,7 +175,9 @@ def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
         calcs = []
         for lookback in lookback_range:
             _, _, metrics = _simulate_forecasts(
-                gci_data=_get_gci_data(start=start, stop=stop),
+                gci_data=get_gci_data(
+                    url=URL, token=TOKEN, org=ORG, start=start, stop=stop
+                ),
                 forecast_days=fc_days,
                 lookback_days=lookback,
             )
@@ -219,17 +191,17 @@ def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
     median_pcc = np.array(all_pcc)
     median_rmse = np.array(all_rmse)
     median_time = np.array(all_calc)
-    fig, axs = plt.subplots(ncols=3)
+    _, ax = plt.subplots()
 
     # PCC
-    axs[0].imshow(median_pcc, cmap="YlGn")
-    axs[0].set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
-    axs[0].set_xlabel("Lookback days")
-    axs[0].set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
-    axs[0].set_ylabel("Forecasted days")
+    ax.imshow(median_pcc, cmap="YlGn")
+    ax.set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
+    ax.set_xlabel("Lookback days")
+    ax.set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
+    ax.set_ylabel("Forecasted days")
     for i in range(len(forecast_days)):
         for j in range(len(lookback_range)):
-            axs[0].text(
+            ax.text(
                 j,
                 i,
                 round(median_pcc[i, j], 3),
@@ -237,17 +209,20 @@ def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
                 va="center",
                 color="white" if median_pcc[i, j] > 0.8 else "black",
             )
-    axs[0].title.set_text("Median PCC")
+    ax.title.set_text("Median PCC")
+    plt.tight_layout()
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_pcc.png")
+    plt.cla()
 
     # RMSE
-    axs[1].imshow(median_rmse, cmap="YlGn_r")
-    axs[1].set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
-    axs[1].set_xlabel("Lookback days")
-    axs[1].set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
-    axs[1].set_ylabel("Forecasted days")
+    ax.imshow(median_rmse, cmap="YlGn_r")
+    ax.set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
+    ax.set_xlabel("Lookback days")
+    ax.set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
+    ax.set_ylabel("Forecasted days")
     for i in range(len(forecast_days)):
         for j in range(len(lookback_range)):
-            axs[1].text(
+            ax.text(
                 j,
                 i,
                 round(median_rmse[i, j]),
@@ -255,17 +230,20 @@ def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
                 va="center",
                 color="white" if median_rmse[i, j] < 85 else "black",
             )
-    axs[1].title.set_text("Median RMSE")
+    ax.title.set_text("Median RMSE")
+    plt.tight_layout()
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_rmse.png")
+    plt.cla()
 
     # Computation Time
-    axs[2].imshow(median_time, cmap="YlGn_r")
-    axs[2].set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
-    axs[2].set_xlabel("Lookback days")
-    axs[2].set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
-    axs[2].set_ylabel("Forecasted days")
+    ax.imshow(median_time, cmap="YlGn_r")
+    ax.set_xticks(np.arange(len(lookback_range)), labels=lookback_range)
+    ax.set_xlabel("Lookback days")
+    ax.set_yticks(np.arange(len(forecast_days)), labels=forecast_days)
+    ax.set_ylabel("Forecasted days")
     for i in range(len(forecast_days)):
         for j in range(len(lookback_range)):
-            axs[2].text(
+            ax.text(
                 j,
                 i,
                 round(median_time[i, j], 4),
@@ -273,19 +251,24 @@ def _parameter_opt(forecast_days: list[int], lookback_range: list[int]):
                 va="center",
                 color="white" if median_time[i, j] < 0.04 else "black",
             )
-    axs[2].title.set_text("Median computation time per forecast [s]")
-
-    fig.suptitle(f"Squirrel Forecasting Simulation for {days} days")
+    ax.title.set_text("Median computation time per forecast [s]")
     plt.tight_layout()
-    plt.show()
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_performance.png")
+    plt.cla()
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         mode = sys.argv[1]
-        if mode == "opt":
-            _parameter_opt(
+        if mode == "param":
+            _parameter_eval(
                 forecast_days=[1, 2, 3], lookback_range=[2, 3, 4, 5, 6, 7, 8, 9, 10]
             )
+        elif mode == "demo":
+            _demo()
+        elif mode == "sim":
+            _visualize_simulation()
+        else:
+            print("Unknown function.")
     else:
-        _visualize_simulation()
+        print("No function specified.")
