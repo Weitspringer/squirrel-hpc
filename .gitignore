@@ -1,3 +1,18 @@
-**/data/*
-!**/data/.gitkeep
+# Python
 .venv/
+__pycache__
+
+# Data directories
+**/data/**/*.json
+!**/data/**/schema.json
+**/data/**/*.csv
+**/data/**/*.svg
+**/data/**/*.png
+**/data/**/*.jpeg
+**/data/**/*.jpg
+
+# Visualizations
+viz/**/*.png
+viz/**/*.jpeg
+viz/**/*.jpg
+viz/**/*.svg

@@ -1,7 +1,7 @@
 # Squirrel - Carbon-aware HPC Scheduling
 
 Squirrel is a scheduler plugin for Slurm.
-The plugin is part of my Master Thesis at the Hasso-Plattner-Institut der Universität Postdam.
+The plugin is part of my Master Thesis at the Hasso-Plattner-Institut of the University of Postdam.
 
 ## Prerequisites
 
