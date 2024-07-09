@@ -1,6 +1,6 @@
 """Experiment for GCI forecasting"""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import os
 import sys
 import time
@@ -11,7 +11,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 
 from src.config.local_paths import VIZ_DIRECTORY
-from src.db.influxdb import get_gci_data
+from src.db.influxdb import get_gci_trace_data, get_gci_data
 from src.forecasting.gci import forecast_gci
 
 TOKEN = os.environ.get("SQUIRREL_INFLUX_TOKEN")
@@ -20,8 +20,20 @@ URL = os.environ.get("SQUIRREL_INFLUX_URL")
 FC_VIZ_DIRECTORY = VIZ_DIRECTORY / "forecasting"
 
 
-def _demo():
-    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
+def _demo(forecast_days: int, lookback_days: int):
+    end_point = datetime.now(tz=UTC)
+    start_point = end_point - timedelta(days=lookback_days, hours=1)
+    gci_history = get_gci_data(
+        url=URL, token=TOKEN, org=ORG, start=start_point, stop=end_point
+    )
+    forecast = forecast_gci(gci_history, days=forecast_days, lookback=lookback_days)
+    plt.plot(forecast["time"], forecast["gci"])
+    plt.xlabel("Time [UTC]")
+    plt.xticks(rotation=45)
+    plt.ylabel("gCO2-eq/kWh")
+    plt.title("GCI Forecast")
+    plt.tight_layout()
+    plt.savefig(VIZ_DIRECTORY / "demo.png")
 
 
 def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
@@ -103,7 +115,9 @@ def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
-        gci_data=get_gci_data(url=URL, token=TOKEN, org=ORG, start=start, stop=stop),
+        gci_data=get_gci_trace_data(
+            url=URL, token=TOKEN, org=ORG, start=start, stop=stop
+        ),
         forecast_days=forecast_days,
         lookback_days=lookback_days,
     )
@@ -161,7 +175,6 @@ def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
 
 def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     """Evaluate forecasting with different parameters."""
-    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.fromisoformat("2023-12-31T23:00:00Z")
     start = datetime.fromisoformat("2023-01-01T00:00:00Z")
     all_pcc = []
@@ -173,7 +186,7 @@ def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
         calcs = []
         for lookback in lookback_range:
             _, _, metrics = _simulate_forecasts(
-                gci_data=get_gci_data(
+                gci_data=get_gci_trace_data(
                     url=URL, token=TOKEN, org=ORG, start=start, stop=stop
                 ),
                 forecast_days=fc_days,
@@ -256,6 +269,7 @@ def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
 
 
 if __name__ == "__main__":
+    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     if len(sys.argv) > 1:
         mode = sys.argv[1]
         if mode == "param":
