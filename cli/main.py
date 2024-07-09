@@ -2,14 +2,8 @@
 
 import typer
 
+from cli import forecast
+
 app = typer.Typer()
 
-
-@app.command()
-def hello(name: str):
-    print(f"Hello {name}")
-
-
-@app.command()
-def forecast():
-    print("Forecast!")
+app.add_typer(forecast.app, name="forecast")
