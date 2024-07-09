@@ -1,8 +1,8 @@
 """Experiment for GCI forecasting"""
 
 from datetime import datetime, timedelta, UTC
+from heapq import heappush, heappop
 import os
-import sys
 import time
 
 import matplotlib.pyplot as plt
@@ -13,6 +13,7 @@ from sklearn.metrics import mean_squared_error
 from src.config.local_paths import VIZ_DIRECTORY
 from src.db.influxdb import get_gci_trace_data, get_gci_data
 from src.forecasting.gci import forecast_gci
+from src.scheduling.timeslot import ConstrainedTimeslot
 
 TOKEN = os.environ.get("SQUIRREL_INFLUX_TOKEN")
 ORG = os.environ.get("SQUIRREL_INFLUX_ORG")
@@ -28,13 +29,27 @@ def demo(forecast_days: int, lookback_days: int):
         url=URL, token=TOKEN, org=ORG, start=start_point, stop=end_point
     )
     forecast = forecast_gci(gci_history, days=forecast_days, lookback=lookback_days)
+    timeslot_heap = []
+    for _, fc_item in forecast.iterrows():
+        ts_item = ConstrainedTimeslot(
+            fc_item["time"],
+            fc_item["time"] + timedelta(hours=1),
+            capacity=1,
+            g_co2eq_per_kwh=fc_item["gci"],
+        )
+        heappush(
+            timeslot_heap,
+            ts_item,
+        )
+    best_ts = heappop(timeslot_heap)
+    print(best_ts.start, best_ts.get_gci())
     plt.plot(forecast["time"], forecast["gci"])
     plt.xlabel("Time [UTC]")
     plt.xticks(rotation=45)
     plt.ylabel("gCO2-eq/kWh")
     plt.title("GCI Forecast")
     plt.tight_layout()
-    plt.savefig(VIZ_DIRECTORY / "demo.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "demo.png")
 
 
 def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
