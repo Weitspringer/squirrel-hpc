@@ -20,8 +20,9 @@ URL = os.environ.get("SQUIRREL_INFLUX_URL")
 FC_VIZ_DIRECTORY = VIZ_DIRECTORY / "forecasting"
 
 
-def _demo(forecast_days: int, lookback_days: int):
-    end_point = datetime.now(tz=UTC)
+def demo(forecast_days: int, lookback_days: int):
+    """Live demo of forecast."""
+    end_point = datetime.now(tz=UTC).replace(microsecond=0, second=0, minute=0)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
     gci_history = get_gci_data(
         url=URL, token=TOKEN, org=ORG, start=start_point, stop=end_point
@@ -110,7 +111,7 @@ def _evaluate_forecast(forecast: pd.DataFrame, ground_truth: pd.DataFrame):
     return rmse, pcc
 
 
-def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
+def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
@@ -173,7 +174,7 @@ def _visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     plt.savefig(FC_VIZ_DIRECTORY / "simulation.png")
 
 
-def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
+def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     """Evaluate forecasting with different parameters."""
     stop = datetime.fromisoformat("2023-12-31T23:00:00Z")
     start = datetime.fromisoformat("2023-01-01T00:00:00Z")
@@ -266,21 +267,3 @@ def _parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     plt.tight_layout()
     plt.savefig(FC_VIZ_DIRECTORY / "param_eval_performance.png")
     plt.cla()
-
-
-if __name__ == "__main__":
-    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    if len(sys.argv) > 1:
-        mode = sys.argv[1]
-        if mode == "param":
-            _parameter_eval(
-                forecast_days=[1, 2, 3], lookback_range=[2, 3, 4, 5, 6, 7, 8, 9, 10]
-            )
-        elif mode == "demo":
-            _demo()
-        elif mode == "sim":
-            _visualize_simulation()
-        else:
-            print("Unknown function.")
-    else:
-        print("No function specified.")
