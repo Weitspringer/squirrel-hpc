@@ -3,6 +3,7 @@
 import typer
 from typing_extensions import Annotated
 
+from src.config.squirrel_conf import Config
 from src.forecasting.showcase import (
     demo as fc_demo,
     parameter_eval,
@@ -20,9 +21,19 @@ def demo(forecast_days: int, lookback_days: int):
 
 
 @app.command()
-def simulation():
+def simulation(
+    hourly: Annotated[
+        bool,
+        typer.Argument(help="Simlulate hourly forecasts."),
+    ] = False,
+):
     """Generate a series of forecasts on historial data."""
-    visualize_simulation()
+    fc_conf = Config.get_builtin_forecast_config()
+    visualize_simulation(
+        forecast_days=fc_conf["forecast_days"],
+        lookback_days=fc_conf["lookback_days"],
+        hourly=hourly,
+    )
 
 
 @app.command()
@@ -36,11 +47,17 @@ def param(
     lookback_max: Annotated[
         int,
         typer.Argument(
-            help="Max. number of days looked back when forecasting (min. 2)."
+            help="Max. number of days looked back when forecasting (min. 1)."
         ),
     ] = 10,
+    hourly: Annotated[
+        bool,
+        typer.Argument(help="Simlulate hourly forecasts."),
+    ] = False,
 ):
     """Perform evaluation for different combinations of forecast and lookback days on historical data."""
     parameter_eval(
-        forecast_days=range(1, fc_max + 1), lookback_range=range(2, lookback_max + 1)
+        forecast_days=range(1, fc_max + 1),
+        lookback_range=range(1, lookback_max + 1),
+        hourly=hourly,
     )

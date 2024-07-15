@@ -5,7 +5,7 @@ from datetime import datetime, UTC
 from influxdb_client import InfluxDBClient
 import pandas as pd
 
-from src.config.squirrel import Config
+from src.config.squirrel_conf import Config
 
 INFLUX_OPT = Config.get_influx_config()
 

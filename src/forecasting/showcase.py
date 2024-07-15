@@ -9,11 +9,11 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 
-from src.config.squirrel import Config
+from src.config.squirrel_conf import Config
 from src.data.gci.influxdb import get_gci_trace_data, get_gci_data
 from src.forecasting.gci import forecast_gci
 
-FC_VIZ_DIRECTORY = Path(Config.get_local_paths()["viz_path"]) / "forecasting"
+FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
 
 
 def demo(forecast_days: int, lookback_days: int):
@@ -31,7 +31,7 @@ def demo(forecast_days: int, lookback_days: int):
     plt.savefig(FC_VIZ_DIRECTORY / "demo.png")
 
 
-def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
+def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
     FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
@@ -39,6 +39,7 @@ def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
         gci_data=get_gci_trace_data(start=start, stop=stop),
         forecast_days=forecast_days,
         lookback_days=lookback_days,
+        hourly=hourly,
     )
 
     # Plotting
@@ -64,6 +65,7 @@ def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
 
     # Set labels and title for primary axis
     ax1.set_xlabel("Date")
+    ax1.tick_params(axis="x", labelrotation=45)
     ax1.set_ylabel("GCI [gCO2-eq. / kWh]")
     ax1.set_title(
         f"{forecast_days}-day GCI Forecasting with {lookback_days} days lookback"
@@ -87,12 +89,11 @@ def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     ax3.spines["right"].set_position(("outward", 60))
 
     # Tight layout and display plot
-    plt.xticks(rotation=45)
     plt.tight_layout()
     plt.savefig(FC_VIZ_DIRECTORY / "simulation.png")
 
 
-def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
+def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: bool):
     """Evaluate forecasting with different parameters."""
     stop = datetime.fromisoformat("2023-12-31T23:00:00Z")
     start = datetime.fromisoformat("2023-01-01T00:00:00Z")
@@ -108,6 +109,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
                 gci_data=get_gci_trace_data(start=start, stop=stop),
                 forecast_days=fc_days,
                 lookback_days=lookback,
+                hourly=hourly,
             )
             pccs.append(np.median(metrics["pcc"]))
             rmses.append(np.median(metrics["rmse"]))
@@ -185,7 +187,9 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     plt.cla()
 
 
-def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
+def _simulate_forecasts(
+    gci_data: pd.DataFrame, forecast_days: int, lookback_days: int, hourly: bool
+):
     # Initialize forecasting data
     all_forecasts = pd.DataFrame()
     metrics = []
@@ -196,10 +200,15 @@ def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_day
     days = (end_point - start_point).days
 
     # Forecasts for the whole time range
-    for i in range(1, days - lookback_days + 1):
+    range_end = (days - lookback_days + 1) * 24 if hourly else days - lookback_days + 1
+    for i in range(1, range_end):
         # Get window for forecasting
-        break_point = pd.to_datetime(
-            end_point - timedelta(days=forecast_days * i), utc=True, unit="ns"
+        break_point = (
+            pd.to_datetime(end_point - timedelta(hours=i), utc=True, unit="ns")
+            if hourly
+            else pd.to_datetime(
+                end_point - timedelta(days=forecast_days * i), utc=True, unit="ns"
+            )
         )
         lookback_point = pd.to_datetime(
             break_point - timedelta(days=lookback_days), utc=True, unit="ns"
