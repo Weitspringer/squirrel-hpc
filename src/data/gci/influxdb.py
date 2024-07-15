@@ -3,11 +3,18 @@
 from datetime import datetime, UTC
 
 from influxdb_client import InfluxDBClient
+import pandas as pd
+
+from src.config.squirrel import Config
+
+INFLUX_OPT = Config.get_influx_config()
 
 
-def get_gci_trace_data(url: str, token: str, org: str, start: datetime, stop: datetime):
+def get_gci_trace_data(start: datetime, stop: datetime):
     """Get GCI trace from InfluxDB"""
-    client = InfluxDBClient(url=url, token=token, org=org)
+    client = InfluxDBClient(
+        url=INFLUX_OPT["url"], token=INFLUX_OPT["token"], org=INFLUX_OPT["org"]
+    )
     start = start.astimezone(tz=UTC)
     stop = stop.astimezone(tz=UTC)
     query = f"""
@@ -18,7 +25,7 @@ def get_gci_trace_data(url: str, token: str, org: str, start: datetime, stop: da
     |> filter(fn: (r) => r["zone"] == "DE")
     |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
     """
-    gci_data = client.query_api().query_data_frame(query=query, org=org)
+    gci_data = client.query_api().query_data_frame(query=query, org=INFLUX_OPT["org"])
     if len(gci_data) > 0:
         gci_data = gci_data[["_time", "g_co2eq_per_kWh"]].rename(
             columns={"_time": "time", "g_co2eq_per_kWh": "gci"}
@@ -28,9 +35,11 @@ def get_gci_trace_data(url: str, token: str, org: str, start: datetime, stop: da
     return gci_data
 
 
-def get_gci_data(url: str, token: str, org: str, start: datetime, stop: datetime):
+def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     """Get GCI data from InfluxDB"""
-    client = InfluxDBClient(url=url, token=token, org=org)
+    client = InfluxDBClient(
+        url=INFLUX_OPT["url"], token=INFLUX_OPT["token"], org=INFLUX_OPT["org"]
+    )
     start = start.astimezone(tz=UTC)
     stop = stop.astimezone(tz=UTC)
     query = f"""
@@ -41,7 +50,7 @@ def get_gci_data(url: str, token: str, org: str, start: datetime, stop: datetime
     |> filter(fn: (r) => r["zone"] == "DE")
     |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
     """
-    gci_data = client.query_api().query_data_frame(query=query, org=org)
+    gci_data = client.query_api().query_data_frame(query=query, org=INFLUX_OPT["org"])
     if len(gci_data) > 0:
         gci_data = gci_data[["_time", "carbonIntensity"]].rename(
             columns={"_time": "time", "carbonIntensity": "gci"}

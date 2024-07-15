@@ -1,8 +1,7 @@
 """Experiment for GCI forecasting"""
 
 from datetime import datetime, timedelta, UTC
-from heapq import heappush, heappop
-import os
+from pathlib import Path
 import time
 
 import matplotlib.pyplot as plt
@@ -10,39 +9,19 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_squared_error
 
-from src.config.local_paths import VIZ_DIRECTORY
-from src.db.influxdb import get_gci_trace_data, get_gci_data
+from src.config.squirrel import Config
+from src.data.gci.influxdb import get_gci_trace_data, get_gci_data
 from src.forecasting.gci import forecast_gci
-from src.scheduling.timeslot import ConstrainedTimeslot
 
-TOKEN = os.environ.get("SQUIRREL_INFLUX_TOKEN")
-ORG = os.environ.get("SQUIRREL_INFLUX_ORG")
-URL = os.environ.get("SQUIRREL_INFLUX_URL")
-FC_VIZ_DIRECTORY = VIZ_DIRECTORY / "forecasting"
+FC_VIZ_DIRECTORY = Path(Config.get_local_paths()["viz_path"]) / "forecasting"
 
 
 def demo(forecast_days: int, lookback_days: int):
     """Live demo of forecast."""
     end_point = datetime.now(tz=UTC).replace(microsecond=0, second=0, minute=0)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
-    gci_history = get_gci_data(
-        url=URL, token=TOKEN, org=ORG, start=start_point, stop=end_point
-    )
+    gci_history = get_gci_data(start=start_point, stop=end_point)
     forecast = forecast_gci(gci_history, days=forecast_days, lookback=lookback_days)
-    timeslot_heap = []
-    for _, fc_item in forecast.iterrows():
-        ts_item = ConstrainedTimeslot(
-            fc_item["time"],
-            fc_item["time"] + timedelta(hours=1),
-            capacity=1,
-            g_co2eq_per_kwh=fc_item["gci"],
-        )
-        heappush(
-            timeslot_heap,
-            ts_item,
-        )
-    best_ts = heappop(timeslot_heap)
-    print(best_ts.start, best_ts.get_gci())
     plt.plot(forecast["time"], forecast["gci"])
     plt.xlabel("Time [UTC]")
     plt.xticks(rotation=45)
@@ -52,88 +31,12 @@ def demo(forecast_days: int, lookback_days: int):
     plt.savefig(FC_VIZ_DIRECTORY / "demo.png")
 
 
-def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
-    # Initialize forecasting data
-    all_forecasts = pd.DataFrame()
-    metrics = []
-
-    # Get timeframe information
-    start_point = gci_data["time"].min()
-    end_point = gci_data["time"].max()
-    days = (end_point - start_point).days
-
-    # Forecasts for the whole time range
-    for i in range(1, days - lookback_days + 1):
-        # Get window for forecasting
-        break_point = pd.to_datetime(
-            end_point - timedelta(days=forecast_days * i), utc=True, unit="ns"
-        )
-        lookback_point = pd.to_datetime(
-            break_point - timedelta(days=lookback_days), utc=True, unit="ns"
-        )
-        if lookback_point < start_point:
-            continue
-        gci_hist = gci_data[gci_data["time"] < break_point]
-        window = gci_hist[gci_hist["time"] >= lookback_point]
-        # Execute forecast
-        tic = time.perf_counter()
-        forecast = forecast_gci(data=window, days=forecast_days, lookback=lookback_days)
-        toc = time.perf_counter()
-        # Evaluate
-        rmse, pcc = _evaluate_forecast(forecast=forecast, ground_truth=gci_data)
-        metrics.append(
-            {
-                "rmse": rmse,
-                "pcc": pcc,
-                "calculation_time": toc - tic,
-                "time": forecast["time"].values[0],
-            }
-        )
-        # Append forecast to other forecasts
-        all_forecasts = pd.concat([all_forecasts, forecast], ignore_index=True)
-
-    all_forecasts = all_forecasts.sort_values(by="time")
-    metrics = pd.DataFrame(metrics)
-
-    return gci_data, all_forecasts, metrics
-
-
-def _evaluate_forecast(forecast: pd.DataFrame, ground_truth: pd.DataFrame):
-    """Calculate Root Mean Squared Error (RMSE)
-    and Pearson Correlation Coefficient (PCC) of the forecast.
-
-    Both dataframes are expected to have a "time" column with timestamps
-    and a "gci" column for the GCI values.
-    """
-
-    # Align the data
-    merged_data = pd.merge(
-        forecast,
-        ground_truth,
-        on="time",
-        how="inner",
-        suffixes=("_forecast", "_actual"),
-    )
-    # Calculate RMSE
-    rmse = np.sqrt(
-        mean_squared_error(
-            merged_data["gci_forecast"].values,
-            merged_data["gci_actual"].values,
-        )
-    )
-    # Calculate Pearson Correlation Coefficient
-    pcc = np.corrcoef(merged_data["gci_forecast"], merged_data["gci_actual"])[0][1]
-    return rmse, pcc
-
-
 def visualize_simulation(forecast_days: int = 1, lookback_days: int = 2):
     FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
-        gci_data=get_gci_trace_data(
-            url=URL, token=TOKEN, org=ORG, start=start, stop=stop
-        ),
+        gci_data=get_gci_trace_data(start=start, stop=stop),
         forecast_days=forecast_days,
         lookback_days=lookback_days,
     )
@@ -202,9 +105,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
         calcs = []
         for lookback in lookback_range:
             _, _, metrics = _simulate_forecasts(
-                gci_data=get_gci_trace_data(
-                    url=URL, token=TOKEN, org=ORG, start=start, stop=stop
-                ),
+                gci_data=get_gci_trace_data(start=start, stop=stop),
                 forecast_days=fc_days,
                 lookback_days=lookback,
             )
@@ -282,3 +183,77 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int]):
     plt.tight_layout()
     plt.savefig(FC_VIZ_DIRECTORY / "param_eval_performance.png")
     plt.cla()
+
+
+def _simulate_forecasts(gci_data: pd.DataFrame, forecast_days: int, lookback_days: int):
+    # Initialize forecasting data
+    all_forecasts = pd.DataFrame()
+    metrics = []
+
+    # Get timeframe information
+    start_point = gci_data["time"].min()
+    end_point = gci_data["time"].max()
+    days = (end_point - start_point).days
+
+    # Forecasts for the whole time range
+    for i in range(1, days - lookback_days + 1):
+        # Get window for forecasting
+        break_point = pd.to_datetime(
+            end_point - timedelta(days=forecast_days * i), utc=True, unit="ns"
+        )
+        lookback_point = pd.to_datetime(
+            break_point - timedelta(days=lookback_days), utc=True, unit="ns"
+        )
+        if lookback_point < start_point:
+            continue
+        gci_hist = gci_data[gci_data["time"] < break_point]
+        window = gci_hist[gci_hist["time"] >= lookback_point]
+        # Execute forecast
+        tic = time.perf_counter()
+        forecast = forecast_gci(data=window, days=forecast_days, lookback=lookback_days)
+        toc = time.perf_counter()
+        # Evaluate
+        rmse, pcc = _evaluate_forecast(forecast=forecast, ground_truth=gci_data)
+        metrics.append(
+            {
+                "rmse": rmse,
+                "pcc": pcc,
+                "calculation_time": toc - tic,
+                "time": forecast["time"].values[0],
+            }
+        )
+        # Append forecast to other forecasts
+        all_forecasts = pd.concat([all_forecasts, forecast], ignore_index=True)
+
+    all_forecasts = all_forecasts.sort_values(by="time")
+    metrics = pd.DataFrame(metrics)
+
+    return gci_data, all_forecasts, metrics
+
+
+def _evaluate_forecast(forecast: pd.DataFrame, ground_truth: pd.DataFrame):
+    """Calculate Root Mean Squared Error (RMSE)
+    and Pearson Correlation Coefficient (PCC) of the forecast.
+
+    Both dataframes are expected to have a "time" column with timestamps
+    and a "gci" column for the GCI values.
+    """
+
+    # Align the data
+    merged_data = pd.merge(
+        forecast,
+        ground_truth,
+        on="time",
+        how="inner",
+        suffixes=("_forecast", "_actual"),
+    )
+    # Calculate RMSE
+    rmse = np.sqrt(
+        mean_squared_error(
+            merged_data["gci_forecast"].values,
+            merged_data["gci_actual"].values,
+        )
+    )
+    # Calculate Pearson Correlation Coefficient
+    pcc = np.corrcoef(merged_data["gci_forecast"], merged_data["gci_actual"])[0][1]
+    return rmse, pcc

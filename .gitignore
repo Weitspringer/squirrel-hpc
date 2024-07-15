@@ -16,3 +16,6 @@ viz/**/*.png
 viz/**/*.jpeg
 viz/**/*.jpg
 viz/**/*.svg
+
+# Configuration
+config.ini
