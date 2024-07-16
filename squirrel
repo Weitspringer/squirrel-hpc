@@ -1,0 +1,19 @@
+#!/bin/bash
+
+# Store arguments relevant to Squirrel
+runtime=0
+args=""
+while [[ $# -gt 0 ]]; do
+        case $1 in
+                --running)
+                        runtime=$2
+                        shift
+                        ;;
+                *)
+                        args=$args" "$1
+                        ;;
+        esac
+        shift
+done
+# Submit
+python -m cli submit "$args" $runtime

@@ -200,8 +200,9 @@ def _simulate_forecasts(
     days = (end_point - start_point).days
 
     # Forecasts for the whole time range
-    range_end = (days - lookback_days + 1) * 24 if hourly else days - lookback_days + 1
-    for i in range(1, range_end):
+    range_start = 24 if hourly else 1
+    range_end = (days - lookback_days) * 24 + 1 if hourly else days - lookback_days + 1
+    for i in reversed(range(range_start, range_end)):
         # Get window for forecasting
         break_point = (
             pd.to_datetime(end_point - timedelta(hours=i), utc=True, unit="ns")
@@ -232,7 +233,7 @@ def _simulate_forecasts(
             }
         )
         # Append forecast to other forecasts
-        all_forecasts = pd.concat([all_forecasts, forecast], ignore_index=True)
+        all_forecasts = pd.concat([all_forecasts, forecast], ignore_index=False)
 
     all_forecasts = all_forecasts.sort_values(by="time")
     metrics = pd.DataFrame(metrics)

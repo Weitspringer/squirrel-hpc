@@ -35,6 +35,10 @@ class SquirrelConfig:
             "token": conf_dict["token"],
         }
 
+    def get_forecast_days(self) -> int:
+        """Get amount of days for the forecast."""
+        return int(self.conf.get("forecast", "forecast_days"))
+
     def get_builtin_forecast_config(self) -> dict:
         """Options for builtin forecasting."""
         fc = self.conf.get("forecast", "forecast_days")

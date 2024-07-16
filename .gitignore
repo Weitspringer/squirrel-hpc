@@ -4,7 +4,6 @@ __pycache__
 
 # Data directories
 **/data/**/*.json
-!**/data/**/schema.json
 **/data/**/*.csv
 **/data/**/*.svg
 **/data/**/*.png
@@ -19,3 +18,6 @@ viz/**/*.svg
 
 # Configuration
 squirrel.ini
+
+# Artifacts
+schedule.csv
