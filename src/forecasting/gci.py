@@ -35,6 +35,7 @@ def forecast_gci(data: pd.DataFrame, days: int = 1, lookback: int = 2) -> pd.Dat
         pd.DataFrame: A DataFrame containing the forecasted GCI with columns "time" and "gci".
     """
     latest_ts = data["time"].max()
+    # Fill empty data points where possible
     data.bfill()
     data.ffill()
     forecast_times = pd.date_range(
@@ -43,14 +44,20 @@ def forecast_gci(data: pd.DataFrame, days: int = 1, lookback: int = 2) -> pd.Dat
         freq="h",
         tz="UTC",
     )
+    # Forecasting using median of past values at corresponding hours
     forecast = []
     for time_point in forecast_times:
         points = []
         for day_offset in range(1, lookback + 1):
             past_time_point = time_point - timedelta(days=day_offset)
             if past_time_point <= latest_ts:
-                points.append(data[data["time"] == past_time_point]["gci"].values[0])
+                # We are in bounds of historical data
+                vals = data[data["time"] == past_time_point]["gci"].values
+                if len(vals) > 0:
+                    # Append value if there is one
+                    points.append(vals[0])
             else:
+                # We are out of bounds of the historical data
                 for fc_point in forecast:
                     if fc_point["time"] == past_time_point:
                         points.append(fc_point["gci"])
