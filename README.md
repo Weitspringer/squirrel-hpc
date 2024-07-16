@@ -20,7 +20,7 @@ Some values are set by default, but you will need to adjust `squirrel.ini` in or
 Configures the connection to InfluxDB.
 ```ini
 [influxdb]
-url=http://172.20.18.12:8086
+url=<host>
 org=<org>
 token=<token>
 ```
