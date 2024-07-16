@@ -7,8 +7,8 @@ from pathlib import Path
 class SquirrelConfig:
     """This class reads the config.ini file"""
 
-    def __init__(self):
-        self.conf = self._read_config("config.ini")
+    def __init__(self, path):
+        self.conf = self._read_config(path)
 
     def _read_config(self, config_file_path) -> configparser.ConfigParser:
         config = configparser.ConfigParser()
@@ -37,11 +37,12 @@ class SquirrelConfig:
 
     def get_builtin_forecast_config(self) -> dict:
         """Options for builtin forecasting."""
-        conf_dict = self.conf["builtin.forecast"]
+        fc = self.conf.get("forecast", "forecast_days")
+        lb = self.conf.get("forecast.builtin", "lookback_days")
         return {
-            "forecast_days": int(conf_dict["forecast_days"]),
-            "lookback_days": int(conf_dict["lookback_days"]),
+            "forecast_days": int(fc),
+            "lookback_days": int(lb),
         }
 
 
-Config = SquirrelConfig()
+Config = SquirrelConfig(path="squirrel.ini")

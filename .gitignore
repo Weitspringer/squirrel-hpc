@@ -18,4 +18,4 @@ viz/**/*.jpg
 viz/**/*.svg
 
 # Configuration
-config.ini
+squirrel.ini
