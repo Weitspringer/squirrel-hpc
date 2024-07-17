@@ -39,14 +39,9 @@ class SquirrelConfig:
         """Get amount of days for the forecast."""
         return int(self.conf.get("forecast", "forecast_days"))
 
-    def get_builtin_forecast_config(self) -> dict:
-        """Options for builtin forecasting."""
-        fc = self.conf.get("forecast", "forecast_days")
-        lb = self.conf.get("forecast.builtin", "lookback_days")
-        return {
-            "forecast_days": int(fc),
-            "lookback_days": int(lb),
-        }
+    def get_lookback_days(self) -> int:
+        """Get amount of lookback days for the forecast."""
+        return int(self.conf.get("forecast.builtin", "lookback_days"))
 
 
 Config = SquirrelConfig(path="squirrel.ini")

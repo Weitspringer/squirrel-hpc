@@ -28,10 +28,9 @@ def simulation(
     ] = False,
 ):
     """Generate a series of forecasts on historial data."""
-    fc_conf = Config.get_builtin_forecast_config()
     visualize_simulation(
-        forecast_days=fc_conf["forecast_days"],
-        lookback_days=fc_conf["lookback_days"],
+        forecast_days=Config.get_forecast_days(),
+        lookback_days=Config.get_lookback_days(),
         hourly=hourly,
     )
 
