@@ -13,6 +13,7 @@ def load_timetable():
     timetable = Timetable()
     timetable.read_csv(Config.get_local_paths()["schedule"])
     # timetable.truncate_history(start=latest)
+    # TODO: Integrate forecast
     if len(timetable.timeslots) == 0:
         start_point = latest - timedelta(days=Config.get_lookback_days(), hours=1)
         gci_history = get_gci_data(start=start_point, stop=latest)
