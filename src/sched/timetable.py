@@ -4,7 +4,7 @@ import csv
 from datetime import datetime
 import json
 from pathlib import Path
-from uuid import uuid4, UUID
+from uuid import uuid4
 
 
 class ConstrainedTimeslot:
@@ -16,7 +16,7 @@ class ConstrainedTimeslot:
         end: datetime,
         gci: float,
         jobs: dict = {},
-        available_resources: dict = {"cpu": 1},
+        available_resources: dict = {},
         reserved_resources: dict = {},
     ) -> None:
         """Timeslot with constraints."""

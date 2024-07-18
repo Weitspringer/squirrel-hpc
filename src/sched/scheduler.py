@@ -28,9 +28,7 @@ def schedule_job(job_id: str, runtime: int) -> datetime:
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
             windows.update({weight: window})
-        result = _allocate_window_greedy(
-            job_id=job_id, windows=windows, resources={"cpu": 1}
-        )
+        result = _allocate_window_greedy(job_id=job_id, windows=windows, resources={})
     write_timetable(timetable)
     if result:
         return result[0].start
@@ -42,7 +40,7 @@ def _allocate_window_greedy(
     job_id: str, windows: dict, resources: dict
 ) -> list[ConstrainedTimeslot]:
     for _, window in dict(sorted(windows.items())).items():
-        reserved = {}
+        reserved_ts = []
         for timeslot in window:
             res_id = timeslot.allocate_job(
                 job_id=job_id,
@@ -52,13 +50,14 @@ def _allocate_window_greedy(
             )
             if res_id:
                 # Successful reservation of resources.
-                reserved.update({job_id: timeslot})
+                reserved_ts.append(timeslot)
             else:
                 # Reservation failed. Shift window to next one.
-                for key, ts in reserved.items():
-                    ts.remove_job(key)
-                reserved.clear()
+                for ts in reserved_ts:
+                    ts.remove_job(job_id)
+                reserved_ts.clear()
                 break
-        if len(reserved) > 0:
+        if len(reserved_ts) > 0:
+            del reserved_ts
             return window
     return None
