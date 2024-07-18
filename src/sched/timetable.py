@@ -15,9 +15,9 @@ class ConstrainedTimeslot:
         start: datetime,
         end: datetime,
         gci: float,
-        jobs: dict = {},
-        available_resources: dict = {},
-        reserved_resources: dict = {},
+        jobs: dict = dict(),
+        available_resources: dict = dict(),
+        reserved_resources: dict = dict(),
     ) -> None:
         """Timeslot with constraints."""
         self.start = start
@@ -43,7 +43,11 @@ class ConstrainedTimeslot:
         self, job_id: str, resources: dict, start: datetime, end: datetime
     ) -> str:
         """Request a certain amount of resources for a specified duration."""
-        if start >= self.start and end <= self.end and len(self.reserved_resources) < 1:
+        if (
+            start >= self.start
+            and end <= self.end
+            and len(self.reserved_resources) == 0
+        ):
             request_uuid = str(uuid4())
             self.reserved_resources.update(
                 {
@@ -56,7 +60,12 @@ class ConstrainedTimeslot:
             )
             self.jobs.update({job_id: request_uuid})
             return request_uuid
-        return None
+        else:
+            return None
+
+    def is_full(self) -> bool:
+        """Determine wether this timeslot is available or not."""
+        return len(self.reserved_resources) != 0
 
     def remove_job(self, job_id: str) -> None:
         """Frees allocated resources."""
@@ -73,7 +82,7 @@ class ConstrainedTimeslot:
 class Timetable:
     """Container for timeslots."""
 
-    def __init__(self, timeslots: list[ConstrainedTimeslot] = []) -> None:
+    def __init__(self, timeslots: list[ConstrainedTimeslot] = list()) -> None:
         """Returns an empty time table."""
         self.timeslots = timeslots
         self._csv_header = [

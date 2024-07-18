@@ -27,9 +27,6 @@ def load_timetable():
                 start=row["time"],
                 end=row["time"] + timedelta(hours=1),
                 gci=row["gci"],
-                jobs={},
-                available_resources={},
-                reserved_resources={},
             )
             timetable.append_timeslot(ts)
     return timetable

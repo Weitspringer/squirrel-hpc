@@ -6,7 +6,7 @@ from functools import reduce
 from src.config.squirrel_conf import Config
 
 from .io import load_timetable, write_timetable
-from .timetable import ConstrainedTimeslot
+from .timetable import ConstrainedTimeslot, Timetable
 
 
 def schedule_job(job_id: str, runtime: int) -> datetime:
@@ -28,7 +28,9 @@ def schedule_job(job_id: str, runtime: int) -> datetime:
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
             windows.update({weight: window})
-        result = _allocate_window_greedy(job_id=job_id, windows=windows, resources={})
+        result = _allocate_window_greedy(
+            job_id=job_id, windows=windows, resources={}, timetable=timetable
+        )
     write_timetable(timetable)
     if result:
         return result[0].start
@@ -37,11 +39,16 @@ def schedule_job(job_id: str, runtime: int) -> datetime:
 
 
 def _allocate_window_greedy(
-    job_id: str, windows: dict, resources: dict
+    job_id: str, windows: dict, resources: dict, timetable: Timetable
 ) -> list[ConstrainedTimeslot]:
     for _, window in dict(sorted(windows.items())).items():
         reserved_ts = []
         for timeslot in window:
+            if timeslot.is_full():
+                for ts in reserved_ts:
+                    ts.remove_job(job_id)
+                reserved_ts.clear()
+                break
             res_id = timeslot.allocate_job(
                 job_id=job_id,
                 resources=resources,
