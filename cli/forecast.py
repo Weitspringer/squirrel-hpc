@@ -24,7 +24,7 @@ def demo(forecast_days: int, lookback_days: int):
 def simulation(
     hourly: Annotated[
         bool,
-        typer.Argument(help="Simlulate hourly forecasts."),
+        typer.Option(help="Simlulate hourly forecasts."),
     ] = False,
 ):
     """Generate a series of forecasts on historial data."""
@@ -39,19 +39,17 @@ def simulation(
 def param(
     fc_max: Annotated[
         int,
-        typer.Argument(
+        typer.Option(
             help="Max. number of days for which a forecast is generated (min. 1)."
         ),
     ] = 3,
     lookback_max: Annotated[
         int,
-        typer.Argument(
-            help="Max. number of days looked back when forecasting (min. 1)."
-        ),
+        typer.Option(help="Max. number of days looked back when forecasting (min. 1)."),
     ] = 10,
     hourly: Annotated[
         bool,
-        typer.Argument(help="Simlulate hourly forecasts."),
+        typer.Option(help="Simlulate hourly forecasts."),
     ] = False,
 ):
     """Perform evaluation for different combinations of forecast and lookback days on historical data."""

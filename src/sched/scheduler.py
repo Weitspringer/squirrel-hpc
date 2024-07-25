@@ -1,6 +1,6 @@
 """Scheduler for sbatch jobs."""
 
-from datetime import datetime
+from datetime import datetime, UTC
 from functools import reduce
 
 from src.config.squirrel_conf import Config
@@ -14,7 +14,7 @@ def schedule_job(job_id: str, runtime: int) -> datetime:
 
     Runtime in hours.
     """
-    timetable = load_timetable()
+    timetable = load_timetable(latest_datetime=datetime.now(tz=UTC))
     timeslots = timetable.timeslots
     result = None
     if runtime / 24 < Config.get_forecast_days():

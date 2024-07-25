@@ -29,10 +29,26 @@ class SquirrelConfig:
     def get_influx_config(self) -> dict:
         """Get all options relevant to InfluxDB."""
         conf_dict = self.conf["influxdb"]
+        hist_dict = self.conf["influxdb.gci.history"]
+        fc_dict = self.conf["influxdb.gci.forecast"]
         return {
             "url": conf_dict["url"],
             "org": conf_dict["org"],
             "token": conf_dict["token"],
+            "gci": {
+                "history": {
+                    "bucket": hist_dict["bucket"],
+                    "measurement": hist_dict["measurement"],
+                    "field": hist_dict["field"],
+                    "zone": hist_dict["zone"],
+                },
+                "forecast": {
+                    "bucket": fc_dict["bucket"],
+                    "measurement": fc_dict["measurement"],
+                    "field": fc_dict["field"],
+                    "zone": fc_dict["zone"],
+                },
+            },
         }
 
     def get_forecast_days(self) -> int:

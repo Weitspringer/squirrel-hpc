@@ -6,7 +6,9 @@ import numpy as np
 import pandas as pd
 
 
-def forecast_gci(data: pd.DataFrame, days: int = 1, lookback: int = 2) -> pd.DataFrame:
+def builtin_forecast_gci(
+    data: pd.DataFrame, days: int = 1, lookback: int = 2
+) -> pd.DataFrame:
     """Forecast the grid carbon intensity for the next specified number of days.
 
     This function predicts the grid carbon intensity (GCI) for the upcoming days

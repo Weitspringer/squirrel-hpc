@@ -90,24 +90,42 @@ class Timetable:
         ]
 
     def append_timeslot(self, timeslot: ConstrainedTimeslot) -> bool:
-        # TODO: Check conflicts
+        """Append a timeslot to the latest timeslot.
+
+        If there are already timeslots in the timetable,
+        the start time of the appended time slot must match
+        the end time of the last time slot.
+        """
+        if not self.is_empty() and self.timeslots[-1].end != timeslot.start:
+            return False
         self.timeslots.append(timeslot)
         return True
 
-    def truncate_history(self, start: datetime):
-        """Discard entries from the past."""
+    def is_empty(self) -> bool:
+        """Check if there are timeslots in the timetable."""
+        return len(self.timeslots) <= 0
+
+    def get_latest(self) -> ConstrainedTimeslot:
+        """Get the latest timeslot."""
+        return self.timeslots[-1]
+
+    def truncate_history(self, latest: datetime):
+        """Discard timeslots from the past."""
+        i = 0
         for timeslot in self.timeslots:
-            if timeslot.end <= start:
-                self.timeslots.remove(timeslot)
+            if timeslot.end <= latest:
+                i += 1
+            else:
                 break
+        self.timeslots = self.timeslots[i:]
 
     def read_csv(self, csv_path: Path):
         """Reads state from csv file."""
-        with open(csv_path) as csv_file:
+        with open(csv_path, "r") as csv_file:
             ttreader = csv.reader(csv_file)
             ttreader.__next__()
             for row in ttreader:
-                self.timeslots.append(
+                self.append_timeslot(
                     ConstrainedTimeslot(
                         start=datetime.fromisoformat(row[0]),
                         end=datetime.fromisoformat(row[1]),

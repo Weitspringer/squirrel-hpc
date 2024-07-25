@@ -1,7 +1,6 @@
 """Experiment for GCI forecasting"""
 
 from datetime import datetime, timedelta, UTC
-from pathlib import Path
 import time
 
 import matplotlib.pyplot as plt
@@ -11,7 +10,7 @@ from sklearn.metrics import mean_squared_error
 
 from src.config.squirrel_conf import Config
 from src.data.gci.influxdb import get_gci_trace_data, get_gci_data
-from src.forecasting.gci import forecast_gci
+from src.forecasting.gci import builtin_forecast_gci
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
 
@@ -21,7 +20,9 @@ def demo(forecast_days: int, lookback_days: int):
     end_point = datetime.now(tz=UTC).replace(microsecond=0, second=0, minute=0)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
     gci_history = get_gci_data(start=start_point, stop=end_point)
-    forecast = forecast_gci(gci_history, days=forecast_days, lookback=lookback_days)
+    forecast = builtin_forecast_gci(
+        gci_history, days=forecast_days, lookback=lookback_days
+    )
     plt.plot(forecast["time"], forecast["gci"])
     plt.xlabel("Time [UTC]")
     plt.xticks(rotation=45)
@@ -220,7 +221,9 @@ def _simulate_forecasts(
         window = gci_hist[gci_hist["time"] >= lookback_point]
         # Execute forecast
         tic = time.perf_counter()
-        forecast = forecast_gci(data=window, days=forecast_days, lookback=lookback_days)
+        forecast = builtin_forecast_gci(
+            data=window, days=forecast_days, lookback=lookback_days
+        )
         toc = time.perf_counter()
         # Evaluate
         rmse, pcc = _evaluate_forecast(forecast=forecast, ground_truth=gci_data)

@@ -42,18 +42,19 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     )
     start = start.astimezone(tz=UTC)
     stop = stop.astimezone(tz=UTC)
+    options = INFLUX_OPT["gci"]["history"]
     query = f"""
-    from(bucket: "squirrel")
+    from(bucket: "{options["bucket"]}")
     |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, stop: {stop.strftime("%Y-%m-%dT%H:%M:%SZ")})
-    |> filter(fn: (r) => r["_measurement"] == "electricity_maps")
-    |> filter(fn: (r) => r["_field"] == "carbonIntensity")
-    |> filter(fn: (r) => r["zone"] == "DE")
+    |> filter(fn: (r) => r["_measurement"] == "{options["measurement"]}")
+    |> filter(fn: (r) => r["_field"] == "{options["field"]}")
+    |> filter(fn: (r) => r["zone"] == "{options["zone"]}")
     |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
     """
     gci_data = client.query_api().query_data_frame(query=query, org=INFLUX_OPT["org"])
     if len(gci_data) > 0:
-        gci_data = gci_data[["_time", "carbonIntensity"]].rename(
-            columns={"_time": "time", "carbonIntensity": "gci"}
+        gci_data = gci_data[["_time", options["field"]]].rename(
+            columns={"_time": "time", options["field"]: "gci"}
         )
     else:
         raise ValueError("No GCI data available.")

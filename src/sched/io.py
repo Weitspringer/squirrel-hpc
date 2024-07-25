@@ -1,26 +1,27 @@
 """Persist state of scheduler on disk."""
 
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 
 from src.config.squirrel_conf import Config
 from src.data.gci.influxdb import get_gci_data
-from src.forecasting.gci import forecast_gci
+from src.forecasting.gci import builtin_forecast_gci
 from .timetable import Timetable, ConstrainedTimeslot
 
 
-def load_timetable():
-    latest = datetime.now(tz=UTC).replace(microsecond=0, second=0, minute=0)
+def load_timetable(latest_datetime: datetime):
+    latest_datetime.replace(microsecond=0, second=0, minute=0)
     timetable = Timetable()
     timetable.read_csv(Config.get_local_paths()["schedule"])
-    # timetable.truncate_history(start=latest)
-    # TODO: Integrate forecast
-    if len(timetable.timeslots) == 0:
-        start_point = latest - timedelta(days=Config.get_lookback_days(), hours=1)
-        gci_history = get_gci_data(start=start_point, stop=latest)
-        forecast = forecast_gci(
-            gci_history,
-            days=Config.get_forecast_days(),
-            lookback=Config.get_lookback_days(),
+    timetable.truncate_history(latest=latest_datetime)
+    fc_days = Config.get_forecast_days()
+    if len(timetable.timeslots) < fc_days * 24:
+        print("Forecast!")
+        start_point = latest_datetime - timedelta(
+            days=Config.get_lookback_days(), hours=1
+        )
+        gci_history = get_gci_data(start=start_point, stop=latest_datetime)
+        forecast = builtin_forecast_gci(
+            gci_history, days=fc_days, lookback=Config.get_lookback_days()
         )
         for _, row in forecast.iterrows():
             ts = ConstrainedTimeslot(
