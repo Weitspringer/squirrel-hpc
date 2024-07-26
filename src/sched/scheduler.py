@@ -9,12 +9,12 @@ from .io import load_timetable, write_timetable
 from .timetable import ConstrainedTimeslot, Timetable
 
 
-def schedule_job(job_id: str, runtime: int) -> datetime:
+def schedule_job(job_id: str, runtime: int, submit_date: datetime) -> datetime:
     """Schedule a job using runtime information.
 
     Runtime in hours.
     """
-    timetable = load_timetable(latest_datetime=datetime.now(tz=UTC))
+    timetable = load_timetable(latest_datetime=submit_date)
     timeslots = timetable.timeslots
     result = None
     if runtime / 24 < Config.get_forecast_days():

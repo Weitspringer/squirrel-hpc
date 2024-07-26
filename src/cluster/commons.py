@@ -5,7 +5,24 @@ DOI: 10.1016/j.adhoc.2014.11.012
 https://github.com/goiri/greenslot/blob/master/gslurmcommons.py
 """
 
-from subprocess import call, PIPE
+from subprocess import call, PIPE, Popen
+
+
+def sbatch(suffix: str) -> str:
+    """Execute sbatch with trailing suffix.
+
+    Args:
+        suffix (str): `sbatch <suffix>` will be executed.
+
+    Returns:
+        int: Returns Job ID. None if not successful.
+    """
+    pipe = Popen(f"sbatch {suffix}", stdout=PIPE)
+    text = pipe.communicate()[0]
+    aux = text.split("\n")[0].split(" ")
+    if len(aux) >= 4:
+        return aux[3]
+    return None
 
 
 def set_job_priority(job_id: str, priority: str) -> int:
