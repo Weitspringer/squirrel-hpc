@@ -15,9 +15,9 @@ class ConstrainedTimeslot:
         start: datetime,
         end: datetime,
         gci: float,
-        jobs: dict = dict(),
-        available_resources: dict = dict(),
-        reserved_resources: dict = dict(),
+        jobs: dict,
+        available_resources: dict,
+        reserved_resources: dict,
     ) -> None:
         """Timeslot with constraints."""
         self.start = start

@@ -15,7 +15,6 @@ def load_timetable(latest_datetime: datetime):
     timetable.truncate_history(latest=latest_datetime)
     fc_days = Config.get_forecast_days()
     if len(timetable.timeslots) < fc_days * 24:
-        print("Forecast!")
         start_point = latest_datetime - timedelta(
             days=Config.get_lookback_days(), hours=1
         )
@@ -28,6 +27,9 @@ def load_timetable(latest_datetime: datetime):
                 start=row["time"],
                 end=row["time"] + timedelta(hours=1),
                 gci=row["gci"],
+                jobs={},
+                available_resources={},
+                reserved_resources={},
             )
             timetable.append_timeslot(ts)
     return timetable
