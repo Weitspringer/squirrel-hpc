@@ -17,7 +17,8 @@ def sbatch(suffix: str) -> str:
     Returns:
         int: Returns Job ID. None if not successful.
     """
-    pipe = Popen(f"sbatch {suffix}", stdout=PIPE)
+    cmd = ["sbatch"] + suffix.split()
+    pipe = Popen(cmd, stdout=PIPE)
     text = pipe.communicate()[0]
     aux = text.split("\n")[0].split(" ")
     if len(aux) >= 4:
