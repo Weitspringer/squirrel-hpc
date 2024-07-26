@@ -1,11 +1,12 @@
 """Persist state of scheduler on disk."""
 
+import csv
 from datetime import datetime, timedelta
 
 from src.config.squirrel_conf import Config
 from src.data.gci.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
-from .timetable import Timetable, ConstrainedTimeslot
+from .timetable import Timetable, ConstrainedTimeslot, TT_CSV_HEADER
 
 
 def load_timetable(latest_datetime: datetime) -> Timetable:
@@ -20,7 +21,12 @@ def load_timetable(latest_datetime: datetime) -> Timetable:
     """
     latest_datetime.replace(microsecond=0, second=0, minute=0)
     timetable = Timetable()
-    timetable.read_csv(Config.get_local_paths()["schedule"])
+    schedule_path = Config.get_local_paths()["schedule"]
+    if not schedule_path.exists():
+        with open(schedule_path, "w") as csv_file:
+            ttwriter = csv.writer(csv_file)
+            ttwriter.writerow(TT_CSV_HEADER)
+    timetable.read_csv()
     timetable.truncate_history(latest=latest_datetime)
     fc_days = Config.get_forecast_days()
     if len(timetable.timeslots) < fc_days * 24:

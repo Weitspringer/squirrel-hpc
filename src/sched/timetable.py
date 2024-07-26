@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+TT_CSV_HEADER = ["start, end, gci, jobs, available_resources, reserved_resources"]
+
 
 class ConstrainedTimeslot:
     """Timeslot with constraints."""
@@ -85,9 +87,7 @@ class Timetable:
     def __init__(self, timeslots: list[ConstrainedTimeslot] = list()) -> None:
         """Returns an empty time table."""
         self.timeslots = timeslots
-        self._csv_header = [
-            "start, end, gci, jobs, available_resources, reserved_resources"
-        ]
+        self._csv_header = TT_CSV_HEADER
 
     def append_timeslot(self, timeslot: ConstrainedTimeslot) -> bool:
         """Append a timeslot to the latest timeslot.
