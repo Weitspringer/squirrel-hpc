@@ -26,7 +26,7 @@ def load_timetable(latest_datetime: datetime) -> Timetable:
         with open(schedule_path, "w") as csv_file:
             ttwriter = csv.writer(csv_file)
             ttwriter.writerow(TT_CSV_HEADER)
-    timetable.read_csv()
+    timetable.read_csv(schedule_path)
     timetable.truncate_history(latest=latest_datetime)
     fc_days = Config.get_forecast_days()
     if len(timetable.timeslots) < fc_days * 24:
