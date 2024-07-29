@@ -11,10 +11,8 @@ INFLUX_OPT = Config.get_influx_config()
 
 
 def get_gci_trace_data(start: datetime, stop: datetime):
-    """Get GCI trace from InfluxDB"""
-    client = InfluxDBClient(
-        url=INFLUX_OPT["url"], token=INFLUX_OPT["token"], org=INFLUX_OPT["org"]
-    )
+    """Get GCI trace from InfluxDB."""
+    client = _get_client()
     start = start.astimezone(tz=UTC)
     stop = stop.astimezone(tz=UTC)
     query = f"""
@@ -36,10 +34,8 @@ def get_gci_trace_data(start: datetime, stop: datetime):
 
 
 def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
-    """Get GCI data from InfluxDB"""
-    client = InfluxDBClient(
-        url=INFLUX_OPT["url"], token=INFLUX_OPT["token"], org=INFLUX_OPT["org"]
-    )
+    """Get GCI data from InfluxDB."""
+    client = _get_client()
     start = start.astimezone(tz=UTC)
     stop = stop.astimezone(tz=UTC)
     options = INFLUX_OPT["gci"]["history"]
@@ -59,3 +55,30 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     else:
         raise ValueError("No GCI data available.")
     return gci_data
+
+
+def write_gci_forecast(forecast: pd.DataFrame) -> None:
+    """Write GCI forecast to InfluxDB.
+    Forecast dataframe is required to have 'time' and 'gci' columns.
+    """
+    client = _get_client()
+    options = INFLUX_OPT["gci"]["forecast"]
+    bucket = options["bucket"]
+    measurement = options["measurement"]
+    field = options["field"]
+    zone = options["zone"]
+    with client.write_api() as writer:
+        for _, row in forecast.iterrows():
+            record = {
+                "measurement": measurement,
+                "fields": {field: row["gci"]},
+                "tags": {"zone": zone},
+                "time": row["time"],
+            }
+            writer.write(bucket=bucket, record=record)
+
+
+def _get_client() -> InfluxDBClient:
+    return InfluxDBClient(
+        url=INFLUX_OPT["url"], token=INFLUX_OPT["token"], org=INFLUX_OPT["org"]
+    )
