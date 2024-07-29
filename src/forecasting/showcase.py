@@ -17,7 +17,7 @@ FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
 
 def demo(forecast_days: int, lookback_days: int):
     """Live demo of forecast."""
-    end_point = datetime.now(tz=UTC).replace(microsecond=0, second=0, minute=0)
+    end_point = datetime.now(tz=UTC)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
     gci_history = get_gci_data(start=start_point, stop=end_point)
     forecast = builtin_forecast_gci(

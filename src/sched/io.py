@@ -19,7 +19,6 @@ def load_timetable(latest_datetime: datetime) -> Timetable:
     Returns:
         Timetable: Timetable object containing timeslots with their states.
     """
-    latest_datetime.replace(microsecond=0, second=0, minute=0)
     timetable = Timetable()
     schedule_path = Config.get_local_paths()["schedule"]
     if not schedule_path.exists():
