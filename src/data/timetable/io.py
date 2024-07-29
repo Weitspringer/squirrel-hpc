@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from src.config.squirrel_conf import Config
 from src.data.gci.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
-from .timetable import Timetable, ConstrainedTimeslot, TT_CSV_HEADER
+from src.sched.timetable import Timetable, ConstrainedTimeslot, TT_CSV_HEADER
 
 
 def load_timetable(latest_datetime: datetime) -> Timetable:

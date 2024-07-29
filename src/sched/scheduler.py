@@ -5,7 +5,7 @@ from functools import reduce
 
 from src.config.squirrel_conf import Config
 
-from .io import load_timetable, write_timetable
+from src.data.timetable.io import load_timetable, write_timetable
 from .timetable import ConstrainedTimeslot, Timetable
 
 
