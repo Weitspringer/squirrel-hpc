@@ -12,5 +12,6 @@ def submit_sbatch(command: str, runtime: int):
     now = datetime.now(tz=UTC)
     start_timeslot = schedule_job(job_id=str(uuid4()), runtime=runtime, submit_date=now)
     delta = (start_timeslot - now).seconds
-    print(f"{command.strip()} --time={runtime}:00:00 --begin=now+{delta}")
-    print(sbatch(suffix=f"{command.strip()} --time={runtime}:00:00 --begin={delta}"))
+    print(
+        sbatch(suffix=f"{command.strip()} --time={runtime}:00:00 --begin=now+{delta}")
+    )
