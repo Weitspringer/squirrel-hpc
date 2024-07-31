@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 
 from src.config.squirrel_conf import Config
-from src.data.gci.influxdb import get_gci_trace_data, get_gci_data
+from src.data.gci.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
@@ -37,7 +37,7 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
-        gci_data=get_gci_trace_data(start=start, stop=stop),
+        gci_data=get_gci_data(start=start, stop=stop),
         forecast_days=forecast_days,
         lookback_days=lookback_days,
         hourly=hourly,
@@ -107,7 +107,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
         calcs = []
         for lookback in lookback_range:
             _, _, metrics = _simulate_forecasts(
-                gci_data=get_gci_trace_data(start=start, stop=stop),
+                gci_data=get_gci_data(start=start, stop=stop),
                 forecast_days=fc_days,
                 lookback_days=lookback,
                 hourly=hourly,
