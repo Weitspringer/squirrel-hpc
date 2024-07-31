@@ -5,6 +5,8 @@ DOI: 10.1016/j.adhoc.2014.11.012
 https://github.com/goiri/greenslot/blob/master/gslurmcommons.py
 """
 
+from json import loads
+from pathlib import Path
 from subprocess import call, PIPE, check_output
 
 
@@ -20,6 +22,16 @@ def sbatch(suffix: str) -> str:
     cmd = ["sbatch"] + suffix.split()
     out = check_output(cmd).decode()
     return out
+
+
+def read_sinfo(path_to_json: Path | None = None) -> dict:
+    """Parses the output of 'sinfo --json'."""
+    if path_to_json is None:
+        cmd = ["sinfo", "--json"]
+        out = check_output(cmd).decode()
+    else:
+        out = path_to_json.read_text()
+    return loads(out)
 
 
 def set_job_priority(job_id: str, priority: str) -> int:
