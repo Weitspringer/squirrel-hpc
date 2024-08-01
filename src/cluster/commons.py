@@ -9,6 +9,8 @@ from json import loads
 from pathlib import Path
 from subprocess import call, PIPE, check_output
 
+import pandas as pd
+
 
 def sbatch(suffix: str) -> str:
     """Execute sbatch with trailing suffix.
@@ -32,6 +34,25 @@ def read_sinfo(path_to_json: Path | None = None) -> dict:
     else:
         out = path_to_json.read_text()
     return loads(out)
+
+
+def get_nodes(path_to_json: Path | None = None) -> pd.DataFrame:
+    """Get all nodes of the cluster."""
+    return pd.DataFrame(read_sinfo(path_to_json=path_to_json).get("nodes"))
+
+
+def get_partitions(path_to_json: Path | None = None) -> dict[str, pd.DataFrame]:
+    """Get nodes for every partition."""
+    part_dict = {}
+    nodes = get_nodes(path_to_json=path_to_json)
+    for _, node in nodes.iterrows():
+        partitions = node["partitions"]
+        for part_name in partitions:
+            if part_name not in part_dict.keys():
+                part_dict.update({part_name: []})
+            part_dict[part_name].append(node.to_dict())
+    # Transform dictionaries into DataFrames
+    return {key: pd.DataFrame(value) for key, value in part_dict.items()}
 
 
 def set_job_priority(job_id: str, priority: str) -> int:
