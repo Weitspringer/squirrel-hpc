@@ -1,5 +1,6 @@
 """Command Line Interface"""
 
+from datetime import datetime, UTC
 from typing_extensions import Annotated
 
 import typer
@@ -22,9 +23,14 @@ def submit(
         int,
         typer.Argument(help="Reserved amount of time (hours)."),
     ],
+    partition: Annotated[
+        str,
+        typer.Option(help="Comma separated list of partitions."),
+    ] = None,
 ):
     """Submit an sbatch job."""
-    submit_sbatch(command, runtime)
+    partition = partition.split(",") if partition is not None else None
+    submit_sbatch(command=command, runtime=runtime, partitions=partition)
 
 
 @app.command()
@@ -37,10 +43,22 @@ def simulate_submit(
         int,
         typer.Argument(help="Reserved amount of time (hours)."),
     ],
+    partition: Annotated[
+        str,
+        typer.Option(help="Comma separated list of partitions."),
+    ] = None,
     submit_date: Annotated[
         str,
         typer.Option(help="Submit date of the simulation."),
     ] = None,
 ):
     """Simulate submitting an sbatch job."""
-    simulate_submit_sbatch(command, runtime, submit_date)
+    partition = partition.split(",") if partition is not None else None
+    submit_date = (
+        datetime.fromisoformat(submit_date)
+        if submit_date is not None
+        else datetime.now(tz=UTC)
+    )
+    simulate_submit_sbatch(
+        command=command, runtime=runtime, submit_date=submit_date, partitions=partition
+    )

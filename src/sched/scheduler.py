@@ -11,14 +11,14 @@ from .timetable import ConstrainedTimeslot
 
 def schedule_job(
     job_id: str, runtime: int, submit_date: datetime, partitions: list[str]
-) -> datetime:
+) -> tuple[datetime, str]:
     """Schedule a job using runtime information.
 
     Runtime in hours.
     """
     timetable = load_timetable(latest_datetime=submit_date)
     timeslots = timetable.timeslots
-    result = None
+    r_window = None
     if runtime / 24 <= Config.get_forecast_days():
         # Find the window where the GCI impact is lowest.
         # NOTE: Jobs are assumed to be non-interruptible.
@@ -30,19 +30,19 @@ def schedule_job(
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
             windows.update({weight: window})
-        result = _allocate_window_greedy(
+        r_window, r_node = _allocate_window_greedy(
             job_id=job_id, windows=windows, partitions=partitions
         )
     write_timetable(timetable)
-    if result:
-        return result[0].start
+    if r_window:
+        return r_window[0].start, r_node
     else:
         raise RuntimeError("Can not allocate job.")
 
 
 def _allocate_window_greedy(
     job_id: str, windows: dict[float, list[ConstrainedTimeslot]], partitions: list[str]
-) -> list[ConstrainedTimeslot]:
+) -> tuple[list[ConstrainedTimeslot], str]:
     """Exclusive reservation of a single node from a suitable partition."""
     # Get suitable nodes
     sinfo_json = Config.get_local_paths().get("sinfo_json")
@@ -81,5 +81,5 @@ def _allocate_window_greedy(
                     break
             if len(reserved_ts) > 0:
                 del reserved_ts
-                return window
-    return None
+                return window, node
+    return None, None

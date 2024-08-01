@@ -9,6 +9,10 @@ while [[ $# -gt 0 ]]; do
                         runtime=$2
                         shift
                         ;;
+                --partition)
+                        partition=$2
+                        shift
+                        ;;
                 *)
                         args=$args" "$1
                         ;;
@@ -16,4 +20,4 @@ while [[ $# -gt 0 ]]; do
         shift
 done
 # Submit
-python -m cli submit "$args" $runtime
+python -m cli submit "$args" $runtime --partition=$partition
