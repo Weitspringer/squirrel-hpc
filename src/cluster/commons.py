@@ -10,8 +10,6 @@ from pathlib import Path
 from subprocess import call, PIPE, check_output
 from typing import Any
 
-import pandas as pd
-
 
 def sbatch(suffix: str) -> str:
     """Execute sbatch with trailing suffix.
@@ -37,25 +35,21 @@ def read_sinfo(path_to_json: Path | None = None) -> dict:
     return loads(out)
 
 
-def get_nodes(path_to_json: Path | None = None) -> pd.DataFrame:
+def get_nodes(path_to_json: Path | None = None) -> list[dict[str, Any]]:
     """Get all nodes of the cluster."""
-    return pd.DataFrame(read_sinfo(path_to_json=path_to_json).get("nodes"))
+    return read_sinfo(path_to_json=path_to_json).get("nodes")
 
 
-def get_partitions(
-    path_to_json: Path | None = None, subset: list[str] | None = None
-) -> dict[str, dict[str, Any]]:
+def get_partitions(path_to_json: Path | None = None) -> dict[str, dict[str, Any]]:
     """Get nodes for every partition."""
     part_dict = {}
     nodes = get_nodes(path_to_json=path_to_json)
-    for _, node in nodes.iterrows():
+    for node in nodes:
         partitions = node["partitions"]
         for part_name in partitions:
-            if subset is not None and part_name not in subset:
-                continue
             if part_name not in part_dict.keys():
                 part_dict.update({part_name: []})
-            part_dict[part_name].append(node.to_dict())
+            part_dict[part_name].append(node)
     return part_dict
 
 

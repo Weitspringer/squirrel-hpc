@@ -6,11 +6,6 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-import pandas as pd
-
-from src.cluster.commons import get_partitions
-from src.config.squirrel_conf import Config
-
 TT_CSV_HEADER = ["start, end, gci, jobs, reserved_resources"]
 
 
@@ -31,17 +26,27 @@ class ConstrainedTimeslot:
         self.gci = gci
         self.jobs = jobs
         self.reserved_resources = reserved_resources
+        self.full_flag = False
 
     def get_duration(self):
         """Returns the duration of the time slot in seconds."""
         return (self.end - self.start).total_seconds()
 
     def get_gci(self):
-        """Get the grid carbon intensity."""
+        """Get the grid carbon intensity for this time slot."""
         return self.gci
 
     def set_gci(self, gci: int):
+        """Set the grid carbon intensity for this time slot."""
         self.gci = gci
+
+    def flag_full(self):
+        """Mark the timeslot as full to save time."""
+        self.full_flag = True
+
+    def is_full(self) -> bool:
+        """Determine wether this timeslot is available or not."""
+        return self.full_flag
 
     def allocate_node_exclusive(
         self, job_id: str, node_name: str, start: datetime, end: datetime
@@ -50,7 +55,7 @@ class ConstrainedTimeslot:
         if not (start >= self.start and end <= self.end):
             return None
         # Check if there is a conflicting reservation
-        for _, r_batch in self.reserved_resources:
+        for _, r_batch in self.reserved_resources.items():
             # Check node name
             if r_batch.get("node") != node_name:
                 continue
@@ -64,19 +69,13 @@ class ConstrainedTimeslot:
         # Request successful
         request_uuid = str(uuid4())
         reservation = {
-            request_uuid: {
-                "start": start.isoformat(),
-                "end": end.isoformat(),
-                "node": node_name,
-            }
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "node": node_name,
         }
-        self.reserved_resources.append(reservation)
+        self.reserved_resources.update({request_uuid: reservation})
         self.jobs.update({job_id: request_uuid})
         return request_uuid
-
-    def is_full(self) -> bool:
-        """Determine wether this timeslot is available or not."""
-        return len(self.reserved_resources) != 0
 
     def remove_job(self, job_id: str) -> None:
         """Frees allocated resources."""
@@ -140,7 +139,7 @@ class Timetable:
                         end=datetime.fromisoformat(row[1]),
                         gci=float(row[2]),
                         jobs=json.loads(row[3]),
-                        reserved_resources=json.loads(row[5]),
+                        reserved_resources=json.loads(row[4]),
                     )
                 )
 
