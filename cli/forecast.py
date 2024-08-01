@@ -1,7 +1,8 @@
 """Forecasting"""
 
-import typer
 from typing_extensions import Annotated
+
+import typer
 
 from src.config.squirrel_conf import Config
 from src.forecasting.showcase import (
