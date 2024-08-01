@@ -6,7 +6,12 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-TT_CSV_HEADER = ["start, end, gci, jobs, available_resources, reserved_resources"]
+import pandas as pd
+
+from src.cluster.commons import get_partitions
+from src.config.squirrel_conf import Config
+
+TT_CSV_HEADER = ["start, end, gci, jobs, reserved_resources"]
 
 
 class ConstrainedTimeslot:
@@ -18,15 +23,13 @@ class ConstrainedTimeslot:
         end: datetime,
         gci: float,
         jobs: dict,
-        available_resources: dict,
-        reserved_resources: dict,
+        reserved_resources: dict[str, dict],
     ) -> None:
         """Timeslot with constraints."""
         self.start = start
         self.end = end
         self.gci = gci
         self.jobs = jobs
-        self.available_resources = available_resources
         self.reserved_resources = reserved_resources
 
     def get_duration(self):
@@ -38,32 +41,38 @@ class ConstrainedTimeslot:
         return self.gci
 
     def set_gci(self, gci: int):
-        """Change the grid carbon intensity"""
         self.gci = gci
 
-    def allocate_job(
-        self, job_id: str, resources: dict, start: datetime, end: datetime
+    def allocate_node_exclusive(
+        self, job_id: str, node_name: str, start: datetime, end: datetime
     ) -> str:
-        """Request a certain amount of resources for a specified duration."""
-        if (
-            start >= self.start
-            and end <= self.end
-            and len(self.reserved_resources) == 0
-        ):
-            request_uuid = str(uuid4())
-            self.reserved_resources.update(
-                {
-                    request_uuid: {
-                        "start": start.isoformat(),
-                        "end": end.isoformat(),
-                        "resources": resources,
-                    }
-                }
-            )
-            self.jobs.update({job_id: request_uuid})
-            return request_uuid
-        else:
+        """Request node for a specified duration."""
+        if not (start >= self.start and end <= self.end):
             return None
+        # Check if there is a conflicting reservation
+        for _, r_batch in self.reserved_resources:
+            # Check node name
+            if r_batch.get("node") != node_name:
+                continue
+            # Check if requested times overlap
+            r_start = datetime.fromisoformat(r_batch.get("start"))
+            r_end = datetime.fromisoformat(r_batch.get("end"))
+            if (end >= r_start and end <= r_end) or (
+                start >= r_start and start <= r_end
+            ):
+                return None
+        # Request successful
+        request_uuid = str(uuid4())
+        reservation = {
+            request_uuid: {
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "node": node_name,
+            }
+        }
+        self.reserved_resources.append(reservation)
+        self.jobs.update({job_id: request_uuid})
+        return request_uuid
 
     def is_full(self) -> bool:
         """Determine wether this timeslot is available or not."""
@@ -131,7 +140,6 @@ class Timetable:
                         end=datetime.fromisoformat(row[1]),
                         gci=float(row[2]),
                         jobs=json.loads(row[3]),
-                        available_resources=json.loads(row[4]),
                         reserved_resources=json.loads(row[5]),
                     )
                 )
@@ -148,7 +156,6 @@ class Timetable:
                         timeslot.end.isoformat(),
                         timeslot.gci,
                         json.dumps(timeslot.jobs),
-                        json.dumps(timeslot.available_resources),
                         json.dumps(timeslot.reserved_resources),
                     ]
                 )

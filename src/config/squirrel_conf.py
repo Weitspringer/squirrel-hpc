@@ -18,6 +18,10 @@ class SquirrelConfig:
     def __str__(self):
         return str(self.conf.items())
 
+    def is_simulation(self) -> bool:
+        """Determine if squirrel is in simulation mode."""
+        return self.conf.getboolean("squirrel", "simulation")
+
     def get_local_paths(self) -> dict:
         """Returns paths to local resources."""
         conf_dict = self.conf["local"]

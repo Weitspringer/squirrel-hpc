@@ -1,15 +1,17 @@
 """Scheduler for sbatch jobs."""
 
-from datetime import datetime, UTC
+from datetime import datetime
 from functools import reduce
 
 from src.config.squirrel_conf import Config
 
 from src.data.timetable.io import load_timetable, write_timetable
-from .timetable import ConstrainedTimeslot, Timetable
+from .timetable import ConstrainedTimeslot
 
 
-def schedule_job(job_id: str, runtime: int, submit_date: datetime) -> datetime:
+def schedule_job(
+    job_id: str, runtime: int, submit_date: datetime, partitions: list[str]
+) -> datetime:
     """Schedule a job using runtime information.
 
     Runtime in hours.
@@ -29,7 +31,7 @@ def schedule_job(job_id: str, runtime: int, submit_date: datetime) -> datetime:
             weight = reduce(lambda x, y: x + y, window_gcis)
             windows.update({weight: window})
         result = _allocate_window_greedy(
-            job_id=job_id, windows=windows, resources={}, timetable=timetable
+            job_id=job_id, windows=windows, partitions=partitions
         )
     write_timetable(timetable)
     if result:
@@ -39,7 +41,7 @@ def schedule_job(job_id: str, runtime: int, submit_date: datetime) -> datetime:
 
 
 def _allocate_window_greedy(
-    job_id: str, windows: dict, resources: dict, timetable: Timetable
+    job_id: str, windows: dict[float, list[ConstrainedTimeslot]], partitions: list[str]
 ) -> list[ConstrainedTimeslot]:
     for _, window in dict(sorted(windows.items())).items():
         reserved_ts = []
@@ -49,9 +51,9 @@ def _allocate_window_greedy(
                     ts.remove_job(job_id)
                 reserved_ts.clear()
                 break
-            res_id = timeslot.allocate_job(
+            res_id = timeslot.allocate_node_exclusive(
                 job_id=job_id,
-                resources=resources,
+                partitions=partitions,
                 start=timeslot.start,
                 end=timeslot.end,
             )
