@@ -1,6 +1,6 @@
 """Manage the Slurm cluster.
 
-Many of these functions are adapted from GreenSlot (Goiri et al., 2015).
+Some of these functions are adapted from GreenSlot (Goiri et al., 2015).
 DOI: 10.1016/j.adhoc.2014.11.012
 https://github.com/goiri/greenslot/blob/master/gslurmcommons.py
 """
@@ -8,6 +8,7 @@ https://github.com/goiri/greenslot/blob/master/gslurmcommons.py
 from json import loads
 from pathlib import Path
 from subprocess import call, PIPE, check_output
+from typing import Any
 
 import pandas as pd
 
@@ -41,18 +42,21 @@ def get_nodes(path_to_json: Path | None = None) -> pd.DataFrame:
     return pd.DataFrame(read_sinfo(path_to_json=path_to_json).get("nodes"))
 
 
-def get_partitions(path_to_json: Path | None = None) -> dict[str, pd.DataFrame]:
+def get_partitions(
+    path_to_json: Path | None = None, subset: list[str] | None = None
+) -> dict[str, dict[str, Any]]:
     """Get nodes for every partition."""
     part_dict = {}
     nodes = get_nodes(path_to_json=path_to_json)
     for _, node in nodes.iterrows():
         partitions = node["partitions"]
         for part_name in partitions:
+            if subset is not None and part_name not in subset:
+                continue
             if part_name not in part_dict.keys():
                 part_dict.update({part_name: []})
             part_dict[part_name].append(node.to_dict())
-    # Transform dictionaries into DataFrames
-    return {key: pd.DataFrame(value) for key, value in part_dict.items()}
+    return part_dict
 
 
 def set_job_priority(job_id: str, priority: str) -> int:
