@@ -7,10 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from research.carbon_emmissions.conversion import estimate_carbon_emmissions
-from research.carbon_emmissions.energycharts import get_carbon_intensity
-from research.energy_data.energycharts import fetch_public_power
-
 ########
 # CALCULATIONS
 ########
