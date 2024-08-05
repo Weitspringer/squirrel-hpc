@@ -1,7 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import List
 from functools import reduce
 
 from src.cluster.commons import get_partitions
