@@ -9,6 +9,7 @@ __pycache__
 **/data/**/*.png
 **/data/**/*.jpeg
 **/data/**/*.jpg
+!simulation/data/*
 
 # Visualizations
 viz/**/*.png

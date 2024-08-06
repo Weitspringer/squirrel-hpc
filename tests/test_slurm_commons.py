@@ -11,7 +11,7 @@ class TestSlurmCommons(unittest.TestCase):
 
     def test_sinfo(self):
         """Tests if output of `sinfo --json` is parsed correctly."""
-        path_to_json = Path("tests") / "data" / "sinfo.json"
+        path_to_json = Path("simulation") / "data" / "multi-node-cluster.json"
         sinfo_dict = mut.read_sinfo(path_to_json=path_to_json)
         assert len(sinfo_dict.keys()) == 3
         assert all(k in sinfo_dict.keys() for k in ["meta", "errors", "nodes"])
