@@ -6,7 +6,7 @@ from functools import reduce
 from src.cluster.commons import get_partitions
 from src.config.squirrel_conf import Config
 from src.data.timetable.io import load_timetable, write_timetable
-from .timetable import ConstrainedTimeslot
+from .timetable import Timetable, ConstrainedTimeslot
 
 
 class Scheduler:
@@ -47,27 +47,27 @@ class Scheduler:
         implementing multiple versions of the algorithm on its own.
         """
         timetable = load_timetable(latest_datetime=submit_date)
-        timeslots = timetable.timeslots
         r_window = None
         if runtime / 24 <= Config.get_forecast_days():
-            # Find the window where the GCI impact is lowest.
-            # NOTE: Jobs are assumed to be non-interruptible.
-            fc_hours = len(timeslots)
-            windows = {}
-            for start_hour in range(0, fc_hours - runtime + 1):
-                # Map-reduce to calculate weight of current window
-                window = timeslots[start_hour : start_hour + runtime]
-                window_gcis = list(map(lambda x: x.gci, window))
-                weight = reduce(lambda x, y: x + y, window_gcis)
-                windows.update({weight: window})
+            nodes = self._get_nodeset(partitions=partitions)
             r_window, r_node = self._strategy.allocate_resources(
-                job_id=job_id, windows=windows, partitions=partitions
+                job_id=job_id, hours=runtime, timetable=timetable, nodes=nodes
             )
-        write_timetable(timetable)
-        if r_window:
-            return r_window[0].start, r_node
-        else:
+        if not r_window:
             raise RuntimeError("Can not allocate job.")
+        write_timetable(timetable)
+        return r_window[0].start, r_node
+
+    def _get_nodeset(self, partitions: list[str]) -> list[str]:
+        # Get suitable nodes based on partitions
+        sinfo_json = Config.get_local_paths().get("sinfo_json")
+        cluster = get_partitions(path_to_json=sinfo_json)
+        nodes = set()
+        for partition, p_nodes in cluster.items():
+            if partition in partitions:
+                for p_node in p_nodes:
+                    nodes.add(p_node["hostname"])
+        return nodes
 
 
 class PlanningStrategy(ABC):
@@ -83,8 +83,9 @@ class PlanningStrategy(ABC):
     def allocate_resources(
         self,
         job_id: str,
-        windows: dict[float, list[ConstrainedTimeslot]],
-        partitions: list[str],
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
     ):
         pass
 
@@ -95,10 +96,20 @@ class CarbonAgnosticFifo(PlanningStrategy):
     def allocate_resources(
         self,
         job_id: str,
-        windows: dict[float, list[ConstrainedTimeslot]],
-        partitions: list[str],
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
     ) -> tuple[list[ConstrainedTimeslot], str]:
-        raise NotImplementedError("Carbon-agnostic FIFO not implemented.")
+        timeslots = timetable.timeslots
+        for start_hour in range(0, len(timeslots) - hours + 1):
+            window = timeslots[start_hour : start_hour + hours]
+            for node in nodes:
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
+                    return window, node
+        return None, None
 
 
 class TemporalShifting(PlanningStrategy):
@@ -107,45 +118,61 @@ class TemporalShifting(PlanningStrategy):
     def allocate_resources(
         self,
         job_id: str,
-        windows: dict[float, list[ConstrainedTimeslot]],
-        partitions: list[str],
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
     ) -> tuple[list[ConstrainedTimeslot], str]:
-        # Get suitable nodes
-        sinfo_json = Config.get_local_paths().get("sinfo_json")
-        cluster = get_partitions(path_to_json=sinfo_json)
-        nodes = set()
-        for partition, p_nodes in cluster.items():
-            if partition in partitions:
-                for p_node in p_nodes:
-                    nodes.add(p_node["hostname"])
+        timeslots = timetable.timeslots
+        # Find the window where the GCI impact is lowest.
+        # NOTE: Jobs are assumed to be non-interruptible.
+        fc_hours = len(timeslots)
+        windows = {}
+        for start_hour in range(0, fc_hours - hours + 1):
+            # Map-reduce to calculate weight of current window
+            window = timeslots[start_hour : start_hour + hours]
+            window_gcis = list(map(lambda x: x.gci, window))
+            weight = reduce(lambda x, y: x + y, window_gcis)
+            windows.update({weight: window})
         # Sort nodes descending with regards to their carbon intensity and iterate over them
         for _, window in dict(sorted(windows.items())).items():
             reserved_ts = []
             # Try to reserve a single node during the timespan
             for node in nodes:
-                for timeslot in window:
-                    if timeslot.is_full():
-                        for ts in reserved_ts:
-                            ts.remove_job(job_id)
-                        reserved_ts.clear()
-                        break
-
-                    res_id = timeslot.allocate_node_exclusive(
-                        job_id=job_id,
-                        node_name=node,
-                        start=timeslot.start,
-                        end=timeslot.end,
-                    )
-                    if res_id:
-                        # Successful reservation of resources.
-                        reserved_ts.append(timeslot)
-                    else:
-                        # Reservation failed. Shift window to next one.
-                        for ts in reserved_ts:
-                            ts.remove_job(job_id)
-                        reserved_ts.clear()
-                        break
-                if len(reserved_ts) > 0:
-                    del reserved_ts
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
                     return window, node
         return None, None
+
+
+def _reserve_resources(
+    job_id: str, window: list[ConstrainedTimeslot], node: str
+) -> list[str] | None:
+    # Reserve resources for a whole window
+    reserved_ts = []
+    for timeslot in window:
+        if timeslot.is_full():
+            for ts in reserved_ts:
+                ts.remove_job(job_id)
+            reserved_ts.clear()
+            break
+
+        res_id = timeslot.allocate_node_exclusive(
+            job_id=job_id,
+            node_name=node,
+            start=timeslot.start,
+            end=timeslot.end,
+        )
+        if res_id:
+            # Successful reservation of resources.
+            reserved_ts.append(timeslot)
+        else:
+            # Reservation failed. Shift window to next one.
+            for ts in reserved_ts:
+                ts.remove_job(job_id)
+            reserved_ts.clear()
+            break
+    if len(reserved_ts) > 0:
+        return reserved_ts
+    return None
