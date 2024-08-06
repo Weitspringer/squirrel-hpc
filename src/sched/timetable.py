@@ -18,10 +18,13 @@ class Timetable:
 
     def __init__(
         self,
-        timeslots: list[ConstrainedTimeslot] | None = list(),
+        timeslots: list[ConstrainedTimeslot] | None = None,
     ) -> None:
         """Returns an empty time table."""
-        self.timeslots = timeslots
+        if timeslots:
+            self.timeslots = timeslots
+        else:
+            self.timeslots = []
         self._csv_header = TT_CSV_HEADER
 
     def append_timeslot(self, timeslot: ConstrainedTimeslot) -> bool:
@@ -45,7 +48,7 @@ class Timetable:
         return self.timeslots[-1]
 
     def append_forecast(self, start: datetime):
-        """Append the forecast starting at a certain time."""
+        """Append timeslots using the forecast starting at a certain time."""
         fc_days = Config.get_forecast_days()
         start_point = start - timedelta(days=Config.get_lookback_days(), hours=1)
         gci_history = get_gci_data(start=start_point, stop=start)
@@ -55,6 +58,19 @@ class Timetable:
         )
         # Create new time slots
         for _, row in forecast.iterrows():
+            ts = ConstrainedTimeslot(
+                start=row["time"],
+                end=row["time"] + timedelta(hours=1),
+                gci=row["gci"],
+                jobs={},
+                reserved_resources={},
+            )
+            self.append_timeslot(ts)
+
+    def append_historic(self, start: datetime, end: datetime):
+        """Append timeslots using historical data."""
+        gci_history = get_gci_data(start=start, stop=end)
+        for _, row in gci_history.iterrows():
             ts = ConstrainedTimeslot(
                 start=row["time"],
                 end=row["time"] + timedelta(hours=1),

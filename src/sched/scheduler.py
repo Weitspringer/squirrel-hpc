@@ -2,6 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 from functools import reduce
+from pathlib import Path
 
 from src.cluster.commons import get_partitions
 from src.config.squirrel_conf import Config
@@ -14,13 +15,14 @@ class Scheduler:
     Strategy pattern.
     """
 
-    def __init__(self, strategy: PlanningStrategy) -> None:
+    def __init__(self, strategy: PlanningStrategy, cluster_info: Path = None) -> None:
         """
         The scheduler accepts a strategy through the constructor, but
         also provides a setter to change it at runtime.
         """
 
         self._strategy = strategy
+        self._cluster_info = cluster_info
 
     @property
     def strategy(self) -> PlanningStrategy:
@@ -61,8 +63,7 @@ class Scheduler:
 
     def _get_nodeset(self, partitions: list[str]) -> list[str]:
         # Get suitable nodes based on partitions
-        sinfo_json = Config.get_local_paths().get("sinfo_json")
-        cluster = get_partitions(path_to_json=sinfo_json)
+        cluster = get_partitions(path_to_json=self._cluster_info)
         nodes = set()
         for partition, p_nodes in cluster.items():
             if partition in partitions:
