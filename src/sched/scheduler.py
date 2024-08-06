@@ -5,7 +5,6 @@ from functools import reduce
 
 from src.cluster.commons import get_partitions
 from src.config.squirrel_conf import Config
-from src.data.timetable.io import load_timetable, write_timetable
 from .timetable import Timetable, ConstrainedTimeslot
 
 
@@ -40,22 +39,24 @@ class Scheduler:
         self._strategy = strategy
 
     def schedule_sbatch(
-        self, job_id: str, runtime: int, submit_date: datetime, partitions: list[str]
+        self,
+        timetable: Timetable,
+        job_id: str,
+        hours: int,
+        partitions: list[str],
     ) -> tuple[datetime, str]:
         """
         Delegates job scheduling to the Strategy object instead of
         implementing multiple versions of the algorithm on its own.
         """
-        timetable = load_timetable(latest_datetime=submit_date)
         r_window = None
-        if runtime / 24 <= Config.get_forecast_days():
+        if hours / 24 <= Config.get_forecast_days():
             nodes = self._get_nodeset(partitions=partitions)
             r_window, r_node = self._strategy.allocate_resources(
-                job_id=job_id, hours=runtime, timetable=timetable, nodes=nodes
+                job_id=job_id, hours=hours, timetable=timetable, nodes=nodes
             )
         if not r_window:
             raise RuntimeError("Can not allocate job.")
-        write_timetable(timetable)
         return r_window[0].start, r_node
 
     def _get_nodeset(self, partitions: list[str]) -> list[str]:

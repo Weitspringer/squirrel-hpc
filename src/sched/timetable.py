@@ -1,98 +1,26 @@
-"""Timeslot class"""
+"""Timetable"""
 
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 from pathlib import Path
-from uuid import uuid4
+
+from src.config.squirrel_conf import Config
+from data.influxdb import get_gci_data
+from src.forecasting.gci import builtin_forecast_gci
+from src.sched.scheduler import Scheduler, TemporalShifting
+from src.sched.timeslot import ConstrainedTimeslot
 
 TT_CSV_HEADER = ["start, end, gci, jobs, reserved_resources"]
-
-
-class ConstrainedTimeslot:
-    """Timeslot with constraints."""
-
-    def __init__(
-        self,
-        start: datetime,
-        end: datetime,
-        gci: float,
-        jobs: dict,
-        reserved_resources: dict[str, dict],
-    ) -> None:
-        """Timeslot with constraints."""
-        self.start = start
-        self.end = end
-        self.gci = gci
-        self.jobs = jobs
-        self.reserved_resources = reserved_resources
-        self.full_flag = False
-
-    def get_duration(self):
-        """Returns the duration of the time slot in seconds."""
-        return (self.end - self.start).total_seconds()
-
-    def get_gci(self):
-        """Get the grid carbon intensity for this time slot."""
-        return self.gci
-
-    def set_gci(self, gci: int):
-        """Set the grid carbon intensity for this time slot."""
-        self.gci = gci
-
-    def flag_full(self):
-        """Mark the timeslot as full to save time."""
-        self.full_flag = True
-
-    def is_full(self) -> bool:
-        """Determine wether this timeslot is available or not."""
-        return self.full_flag
-
-    def allocate_node_exclusive(
-        self, job_id: str, node_name: str, start: datetime, end: datetime
-    ) -> str:
-        """Request node for a specified duration."""
-        if not (start >= self.start and end <= self.end):
-            return None
-        # Check if there is a conflicting reservation
-        for _, r_batch in self.reserved_resources.items():
-            # Check node name
-            if r_batch.get("node") != node_name:
-                continue
-            # Check if requested times overlap
-            r_start = datetime.fromisoformat(r_batch.get("start"))
-            r_end = datetime.fromisoformat(r_batch.get("end"))
-            if (end >= r_start and end <= r_end) or (
-                start >= r_start and start <= r_end
-            ):
-                return None
-        # Request successful
-        request_uuid = str(uuid4())
-        reservation = {
-            "start": start.isoformat(),
-            "end": end.isoformat(),
-            "node": node_name,
-        }
-        self.reserved_resources.update({request_uuid: reservation})
-        self.jobs.update({job_id: request_uuid})
-        return request_uuid
-
-    def remove_job(self, job_id: str) -> None:
-        """Frees allocated resources."""
-        res_id = self.jobs.pop(job_id)
-        self.reserved_resources.pop(res_id)
-
-    def __eq__(self, value: object) -> bool:
-        """Defines when 2 time slots are equal."""
-        if not isinstance(value, ConstrainedTimeslot):
-            return False
-        return self.start == value.start and self.end == value.end
 
 
 class Timetable:
     """Container for timeslots."""
 
-    def __init__(self, timeslots: list[ConstrainedTimeslot] = list()) -> None:
+    def __init__(
+        self,
+        timeslots: list[ConstrainedTimeslot] | None = list(),
+    ) -> None:
         """Returns an empty time table."""
         self.timeslots = timeslots
         self._csv_header = TT_CSV_HEADER
@@ -116,6 +44,26 @@ class Timetable:
     def get_latest(self) -> ConstrainedTimeslot:
         """Get the latest timeslot."""
         return self.timeslots[-1]
+
+    def append_forecast(self, start: datetime):
+        """Append the forecast starting at a certain time."""
+        fc_days = Config.get_forecast_days()
+        start_point = start - timedelta(days=Config.get_lookback_days(), hours=1)
+        gci_history = get_gci_data(start=start_point, stop=start)
+        # TODO: Get forecast from InfluxDB
+        forecast = builtin_forecast_gci(
+            gci_history, days=fc_days, lookback=Config.get_lookback_days()
+        )
+        # Create new time slots
+        for _, row in forecast.iterrows():
+            ts = ConstrainedTimeslot(
+                start=row["time"],
+                end=row["time"] + timedelta(hours=1),
+                gci=row["gci"],
+                jobs={},
+                reserved_resources={},
+            )
+            self.append_timeslot(ts)
 
     def truncate_history(self, latest: datetime):
         """Discard timeslots from the past."""

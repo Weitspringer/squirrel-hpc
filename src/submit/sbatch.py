@@ -4,6 +4,7 @@ from datetime import datetime, UTC
 from uuid import uuid4
 
 from src.cluster.commons import sbatch
+from data.timetable import tt_from_csv, tt_to_csv
 from src.sched.scheduler import Scheduler, TemporalShifting
 
 
@@ -11,8 +12,9 @@ def submit_sbatch(command: str, runtime: int, partitions: list[str]):
     """Submit a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(strategy=TemporalShifting())
     now = datetime.now(tz=UTC)
+    timetable = tt_from_csv(start=now)
     start_timeslot, node = scheduler.schedule_sbatch(
-        job_id=str(uuid4()), runtime=runtime, submit_date=now, partitions=partitions
+        timetable=timetable, job_id=str(uuid4()), hours=runtime, partitions=partitions
     )
     delta = (start_timeslot - now).seconds
     print(
@@ -20,6 +22,7 @@ def submit_sbatch(command: str, runtime: int, partitions: list[str]):
             suffix=f"{command.strip()} --time={runtime}:00:00 --begin=now+{delta} --nodelist={node} --exclusive"
         )
     )
+    tt_to_csv(timetable)
 
 
 def simulate_submit_sbatch(
@@ -27,13 +30,12 @@ def simulate_submit_sbatch(
 ):
     """Simulate submitting a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(strategy=TemporalShifting())
+    timetable = tt_from_csv(start=submit_date)
     start_timeslot, node = scheduler.schedule_sbatch(
-        job_id=str(uuid4()),
-        runtime=runtime,
-        submit_date=submit_date,
-        partitions=partitions,
+        timetable=timetable, job_id=str(uuid4()), hours=runtime, partitions=partitions
     )
     delta = (start_timeslot - submit_date).seconds
     print(
         f"sbatch {command.strip()} --time={runtime}:00:00 --begin=now+{delta} --nodelist={node} --exclusive"
     )
+    tt_to_csv(timetable)

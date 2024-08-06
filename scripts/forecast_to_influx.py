@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, UTC
 
 from src.config.squirrel_conf import Config
-from src.data.gci.influxdb import get_gci_data, write_gci_forecast
+from data.influxdb import get_gci_data, write_gci_forecast
 from src.forecasting.gci import builtin_forecast_gci
 
 now = datetime.now(tz=UTC)
