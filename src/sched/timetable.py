@@ -6,9 +6,8 @@ import json
 from pathlib import Path
 
 from src.config.squirrel_conf import Config
-from data.influxdb import get_gci_data
+from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
-from src.sched.scheduler import Scheduler, TemporalShifting
 from src.sched.timeslot import ConstrainedTimeslot
 
 TT_CSV_HEADER = ["start, end, gci, jobs, reserved_resources"]

@@ -4,7 +4,7 @@ import csv
 from datetime import datetime, timedelta
 
 from src.config.squirrel_conf import Config
-from src.sched.timetable import Timetable
+from src.sched.timetable import Timetable, TT_CSV_HEADER
 
 
 def tt_from_csv(start: datetime) -> Timetable | None:
@@ -12,7 +12,9 @@ def tt_from_csv(start: datetime) -> Timetable | None:
     schedule_path = Config.get_local_paths().get("schedule")
     # Check csv
     if not schedule_path.exists():
-        return None
+        with open(schedule_path, "w") as csv_file:
+            ttwriter = csv.writer(csv_file)
+            ttwriter.writerow(TT_CSV_HEADER)
     # Load state from csv
     timetable.read_csv(schedule_path)
     # Remove past time points from time table

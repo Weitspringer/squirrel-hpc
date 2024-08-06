@@ -9,7 +9,7 @@ import pandas as pd
 from sklearn.metrics import mean_squared_error
 
 from src.config.squirrel_conf import Config
-from data.influxdb import get_gci_data
+from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"

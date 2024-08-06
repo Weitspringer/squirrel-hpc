@@ -4,7 +4,7 @@ from datetime import datetime, UTC
 from uuid import uuid4
 
 from src.cluster.commons import sbatch
-from data.timetable import tt_from_csv, tt_to_csv
+from src.data.timetable import tt_from_csv, tt_to_csv
 from src.sched.scheduler import Scheduler, TemporalShifting
 
 
