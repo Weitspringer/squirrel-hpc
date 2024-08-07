@@ -52,7 +52,7 @@ class Scheduler:
         implementing multiple versions of the algorithm on its own.
         """
         r_window = None
-        if hours / 24 <= Config.get_forecast_days():
+        if hours <= len(timetable.timeslots):
             nodes = self._get_nodeset(partitions=partitions)
             r_window, r_node = self._strategy.allocate_resources(
                 job_id=job_id, hours=hours, timetable=timetable, nodes=nodes
