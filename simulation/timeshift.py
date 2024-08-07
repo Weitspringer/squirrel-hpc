@@ -9,7 +9,7 @@ import pandas as pd
 from src.sched.scheduler import Scheduler, TemporalShifting, CarbonAgnosticFifo
 from src.sched.timetable import Timetable
 
-DAYS = 4
+DAYS = 5
 JOB_CONSUMPTION_WATTS = 150
 CLUSTER_PATH = Path("simulation") / "data" / "single-node-cluster.json"
 # Create schedulers
@@ -19,7 +19,7 @@ carbon_agnostic_scheduler = Scheduler(
 )
 timeshift_scheduler = Scheduler(strategy=TemporalShifting(), cluster_info=CLUSTER_PATH)
 # Create date range
-first_submit_date = datetime.fromisoformat("2024-08-02T00:00:00+00:00")
+first_submit_date = datetime.fromisoformat("2023-08-02T00:00:00+00:00")
 submit_dates = pd.date_range(
     start=first_submit_date,
     periods=DAYS * 24,
@@ -71,7 +71,7 @@ plt.step(submit_dates, ts_footprints, color="green", label="Timeshift")
 plt.xticks(rotation=45)
 plt.xlabel("Hour of submission")
 plt.ylabel("gCO2-eq. emitted")
-plt.title("Scheduling of five 1-hour jobs, 100% forecasting accuracy")
+plt.title("Carbon Footprint of Scenario A for 1-day ahead Scheduling")
 plt.legend()
 plt.tight_layout()
 plt.savefig(Path("viz") / "simulation" / "timeshift-effect-perfect-forecast.png")
