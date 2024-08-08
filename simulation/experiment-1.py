@@ -14,7 +14,7 @@ from src.sched.timetable import Timetable
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 SAMPLE_DAY_START = 100
-SAMPLE_DAY_END = 105
+SAMPLE_DAY_END = 104
 JOB_CONSUMPTION_WATTS = 150
 CLUSTER_PATH = Path("simulation") / "data" / "single-node-cluster.json"
 RESULT_DIR = Path("viz") / "simulation" / "exp1"
@@ -74,7 +74,7 @@ for submit_date in submit_dates:
     ca_delays.append(np.average(delays))
     # Calculate timeshifting emissions and average delay
     ts_footprint = 0
-    delays = []
+    delays.clear()
     for index, slot in enumerate(ts_timetable.timeslots):
         if len(slot.reserved_resources) == 1:
             delays.append(index)
@@ -100,10 +100,10 @@ plt.step(
     color="orange",
     label="Timeshifting",
 )
-plt.xlabel("Hour of submission")
+plt.xlabel("Hour of Workload Submission")
 plt.xticks(rotation=45)
 plt.ylabel("CO2-eq. emitted [g]")
-plt.title("Carbon Footprint of Scenario A for 1-day ahead Scheduling")
+plt.title("E1: Carbon Footprint for 1-day-ahead Scheduling")
 plt.legend()
 plt.tight_layout()
 plt.savefig(RESULT_DIR / "exp1-sample.png")
@@ -114,18 +114,22 @@ ts_savings_hourly_median = np.ma.median(
     np.subtract(1, np.divide(ts_footprints, ca_footprints)).reshape((DAYS, 24)), axis=0
 )
 plt.bar(hours, ts_savings_hourly_median, color="orange")
-plt.xlabel("Hour of submission")
+plt.xlabel("Hour of Day")
 plt.ylabel("Median Fraction of Emissions Saved")
 plt.ylim(0, 1)
-plt.title("Median Fractional Carbon Savings for Scenario A (Timeshifting vs. FIFO)")
+plt.title("E1: Median Fractional Carbon Savings of Timeshifting (vs. FIFO)")
 plt.tight_layout()
 plt.savefig(RESULT_DIR / "exp1-results.png")
 plt.clf()
 
 # Plot average job delay
 ts_hourly_delay = np.ma.median(np.reshape(ts_delays, (DAYS, 24)), axis=0)
-ca_hourly_delay = np.ma.median(np.reshape(ts_delays, (DAYS, 24)), axis=0)
+ca_hourly_delay = np.ma.median(np.reshape(ca_delays, (DAYS, 24)), axis=0)
 plt.plot(hours, ca_hourly_delay, color="blue", label="FIFO")
 plt.plot(hours, ts_hourly_delay, color="orange", label="Timeshifting")
 plt.ylabel("Avg. Delay [hours]")
-plt.xlabel("Hour of submission")
+plt.xlabel("Hour of Day")
+plt.legend()
+plt.title("E1: Average Delay per Job")
+plt.tight_layout()
+plt.savefig(RESULT_DIR / "exp1-delay.png")
