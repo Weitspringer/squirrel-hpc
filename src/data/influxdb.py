@@ -10,7 +10,9 @@ from src.config.squirrel_conf import Config
 INFLUX_OPT = Config.get_influx_config()
 
 
-def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
+def get_gci_data(
+    start: datetime, stop: datetime, tags: dict[str, str] | None = None
+) -> pd.DataFrame:
     """Get GCI data from InfluxDB."""
     client = _get_client()
     start = start.astimezone(tz=UTC)
@@ -22,7 +24,8 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     |> filter(fn: (r) => r["_measurement"] == "{options["measurement"]}")
     |> filter(fn: (r) => r["_field"] == "{options["field"]}")
     """
-    tags = options["tags"]
+    if not tags:
+        tags = options["tags"]
     for tag, tag_value in tags.items():
         query += f"""|> filter(fn: (r) => r["{tag}"] == "{tag_value}")\n"""
     query += (
@@ -38,7 +41,7 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     return gci_data
 
 
-def write_gci_forecast(forecast: pd.DataFrame) -> None:
+def write_gci_forecast(forecast: pd.DataFrame, tags: dict[str, str] | None = None) -> None:
     """Write GCI forecast to InfluxDB.
     Forecast dataframe is required to have 'time' and 'gci' columns.
     """
@@ -47,12 +50,14 @@ def write_gci_forecast(forecast: pd.DataFrame) -> None:
     bucket = options["bucket"]
     measurement = options["measurement"]
     field = options["field"]
+    if not tags:
+        tags = options["tags"]
     with client.write_api() as writer:
         for _, row in forecast.iterrows():
             record = {
                 "measurement": measurement,
                 "fields": {field: row["gci"]},
-                "tags": options["tags"],
+                "tags": tags,
                 "time": row["time"],
             }
             writer.write(bucket=bucket, record=record)
