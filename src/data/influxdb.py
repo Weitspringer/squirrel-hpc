@@ -21,9 +21,13 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     |> range(start: {start.strftime("%Y-%m-%dT%H:%M:%SZ")}, stop: {stop.strftime("%Y-%m-%dT%H:%M:%SZ")})
     |> filter(fn: (r) => r["_measurement"] == "{options["measurement"]}")
     |> filter(fn: (r) => r["_field"] == "{options["field"]}")
-    |> filter(fn: (r) => r["zone"] == "{options["zone"]}")
-    |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
     """
+    tags = options["tags"]
+    for tag, tag_value in tags.items():
+        query += f"""|> filter(fn: (r) => r["{tag}"] == "{tag_value}")\n"""
+    query += (
+        """|> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")"""
+    )
     gci_data = client.query_api().query_data_frame(query=query, org=INFLUX_OPT["org"])
     if len(gci_data) > 0:
         gci_data = gci_data[["_time", options["field"]]].rename(
@@ -43,13 +47,12 @@ def write_gci_forecast(forecast: pd.DataFrame) -> None:
     bucket = options["bucket"]
     measurement = options["measurement"]
     field = options["field"]
-    zone = options["zone"]
     with client.write_api() as writer:
         for _, row in forecast.iterrows():
             record = {
                 "measurement": measurement,
                 "fields": {field: row["gci"]},
-                "tags": {"zone": zone},
+                "tags": options["tags"],
                 "time": row["time"],
             }
             writer.write(bucket=bucket, record=record)

@@ -1,6 +1,7 @@
 """Configuration for Squirrel."""
 
 import configparser
+from json import loads
 from pathlib import Path
 
 
@@ -40,13 +41,13 @@ class SquirrelConfig:
                     "bucket": hist_dict["bucket"],
                     "measurement": hist_dict["measurement"],
                     "field": hist_dict["field"],
-                    "zone": hist_dict["zone"],
+                    "tags": loads(hist_dict["tags"]),
                 },
                 "forecast": {
                     "bucket": fc_dict["bucket"],
                     "measurement": fc_dict["measurement"],
                     "field": fc_dict["field"],
-                    "zone": fc_dict["zone"],
+                    "tags": loads(hist_dict["tags"]),
                 },
             },
         }
