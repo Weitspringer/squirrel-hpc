@@ -5,12 +5,13 @@ from typing_extensions import Annotated
 
 import typer
 
-from cli import forecast
+from cli import forecast, emaps
 from src.submit.sbatch import submit_sbatch, simulate_submit_sbatch
 
 app = typer.Typer()
 
 app.add_typer(forecast.app, name="forecast")
+app.add_typer(emaps.app, name="electricitymaps")
 
 
 @app.command()
