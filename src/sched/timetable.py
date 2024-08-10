@@ -47,11 +47,11 @@ class Timetable:
         """Get the latest timeslot."""
         return self.timeslots[-1]
 
-    def append_forecast(self, start: datetime):
+    def append_forecast(self, start: datetime, options: dict | None = None):
         """Append timeslots using the forecast starting at a certain time."""
         fc_days = Config.get_forecast_days()
         start_point = start - timedelta(days=Config.get_lookback_days(), hours=1)
-        gci_history = get_gci_data(start=start_point, stop=start)
+        gci_history = get_gci_data(start=start_point, stop=start, options=options)
         # TODO: Get forecast from InfluxDB
         forecast = builtin_forecast_gci(
             gci_history, days=fc_days, lookback=Config.get_lookback_days()
@@ -67,9 +67,9 @@ class Timetable:
             )
             self.append_timeslot(ts)
 
-    def append_historic(self, start: datetime, end: datetime):
+    def append_historic(self, start: datetime, end: datetime, options: dict | None = None):
         """Append timeslots using historical data."""
-        gci_history = get_gci_data(start=start, stop=end)
+        gci_history = get_gci_data(start=start, stop=end, options=options)
         for _, row in gci_history.iterrows():
             ts = ConstrainedTimeslot(
                 start=row["time"],
