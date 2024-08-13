@@ -10,9 +10,12 @@ from src.config.squirrel_conf import Config
 INFLUX_OPT = Config.get_influx_config()
 
 
-def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
+def get_gci_data(
+    start: datetime, stop: datetime, options: dict | None = None
+) -> pd.DataFrame:
     """Get GCI data from InfluxDB."""
-    options = INFLUX_OPT["gci"]["history"]
+    if not options:
+        options = INFLUX_OPT["gci"]["history"]
     gci_data = _get_data_as_df(start=start, stop=stop, options=options)
     if len(gci_data) > 0:
         gci_data = gci_data[["_time", options["field"]]].rename(
@@ -23,10 +26,12 @@ def get_gci_data(start: datetime, stop: datetime) -> pd.DataFrame:
     return gci_data
 
 
-def write_gci_forecast(forecast: pd.DataFrame) -> None:
+def write_gci_forecast(forecast: pd.DataFrame, options: dict | None = None) -> None:
     """Write GCI forecast to InfluxDB.
     Forecast dataframe is required to have 'time' and 'gci' columns.
     """
+    if not options:
+        options = INFLUX_OPT["gci"]["forecast"]
     _write_data_from_df(
         data=forecast,
         options=INFLUX_OPT["gci"]["forecast"],
