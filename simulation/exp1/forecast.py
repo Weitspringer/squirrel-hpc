@@ -9,22 +9,29 @@ import numpy as np
 import pandas as pd
 
 from src.config.squirrel_conf import Config
+from src.data.influxdb import get_gci_data
 from src.sched.scheduler import Scheduler, TemporalShifting, CarbonAgnosticFifo
 from src.sched.timetable import Timetable
 
 # Experiment configuration
 ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
-START = "2023-01-01T00:00:00+00:00"
-DAYS = 364
-JOB_CONSUMPTION_WATTS = 150
+START = "2023-01-03T00:00:00+00:00"
+DAYS = 362
+JOBS = {"job1": 250, "job2": 200, "job3": 150, "job4": 100, "job5": 50}
 CLUSTER_PATH = Path("simulation") / "data" / "single-node-cluster.json"
-RESULT_DIR = Path("viz") / "simulation" / "exp1"
+RESULT_DIR = Path("viz") / "simulation" / "exp1" / "forecast"
 RESULT_DIR.mkdir(exist_ok=True)
 
 
 def _sim_schedule(
     submit_date: datetime, influx_options: dict
 ) -> tuple[float, float, float, float]:
+    # Get ground truth GCI data
+    gci_hist = get_gci_data(
+        start=datetime.fromisoformat(START),
+        stop=datetime.fromisoformat(START) + timedelta(days=DAYS + 1),
+        options=influx_options,
+    )
     # Create schedulers
     carbon_agnostic_scheduler = Scheduler(
         strategy=CarbonAgnosticFifo(),
@@ -37,31 +44,39 @@ def _sim_schedule(
     # Construct new time tables
     # Append ground truth data to new timetables (no forecasting error)
     ca_timetable = Timetable()
-    ca_timetable.append_historic(
+    ca_timetable.append_forecast(
         start=submit_date,
-        end=submit_date + timedelta(hours=24),
+        forecast_days=1,
+        lookback_days=2,
         options=influx_options,
     )
     ts_timetable = Timetable()
-    ts_timetable.append_historic(
+    ts_timetable.append_forecast(
         start=submit_date,
-        end=submit_date + timedelta(hours=24),
+        forecast_days=1,
+        lookback_days=2,
         options=influx_options,
     )
-    for i in range(5):
+    for job_id in JOBS.keys():
         carbon_agnostic_scheduler.schedule_sbatch(
-            timetable=ca_timetable, job_id=str(i), hours=1, partitions=["admin"]
+            timetable=ca_timetable, job_id=job_id, hours=1, partitions=["admin"]
         )
         timeshift_scheduler.schedule_sbatch(
-            timetable=ts_timetable, job_id=str(i), hours=1, partitions=["admin"]
+            timetable=ts_timetable, job_id=job_id, hours=1, partitions=["admin"]
         )
     # Calculate carbon-agnostic emissions and average delay
     ca_footprint = 0
     ca_delays = []
     for index, slot in enumerate(ca_timetable.timeslots):
         if len(slot.reserved_resources) == 1:
-            ca_delays.append(index)
-            ca_footprint += slot.gci * (JOB_CONSUMPTION_WATTS / 1000)
+            for key, watts in JOBS.items():
+                reservation = slot.get_reservation(key)
+                if reservation:
+                    ca_delays.append(index)
+                    real_gci = gci_hist.loc[
+                        gci_hist["time"] == pd.Timestamp(slot.start)
+                    ].iloc[0]["gci"]
+                    ca_footprint += real_gci * (watts / 1000)
         elif len(slot.reserved_resources) > 1:
             raise RuntimeError(
                 "Please use single-node configuration for this experiment!"
@@ -71,8 +86,24 @@ def _sim_schedule(
     ts_delays = []
     for index, slot in enumerate(ts_timetable.timeslots):
         if len(slot.reserved_resources) == 1:
-            ts_delays.append(index)
-            ts_footprint += slot.gci * (JOB_CONSUMPTION_WATTS / 1000)
+            for key, watts in JOBS.items():
+                reservation = slot.get_reservation(key)
+                if reservation:
+                    ts_delays.append(index)
+                    real_gci = gci_hist.loc[
+                        gci_hist["time"] == pd.Timestamp(slot.start)
+                    ].iloc[0]["gci"]
+                    ts_footprint += real_gci * (
+                        (watts / 1000)
+                        * (
+                            (
+                                datetime.fromisoformat(reservation.get("end"))
+                                - datetime.fromisoformat(reservation.get("start"))
+                            ).seconds
+                            / 60
+                            / 60
+                        )
+                    )
         elif len(slot.reserved_resources) > 1:
             raise RuntimeError(
                 "Please use single-node configuration for this experiment!"
@@ -153,9 +184,10 @@ plt.ylabel("Median Fraction of Emissions Saved")
 # plt.title("E1: Median Fractional Carbon Savings of Timeshifting (vs. FIFO)")
 plt.xlabel("Hour of Day")
 plt.legend(loc="upper left", ncols=len(ZONES))
-plt.ylim(0, 1)
+plt.ylim(-0.2, 1)
+plt.grid(axis="y", linewidth=0.5)
 plt.tight_layout()
-plt.savefig(RESULT_DIR / "exp1-result.png")
+plt.savefig(RESULT_DIR / "result.png")
 plt.clf()
 
 ## Plot average job delay
@@ -168,4 +200,4 @@ plt.ylabel("Avg. Delay [hours]")
 plt.xlabel("Hour of Day")
 plt.legend()
 plt.tight_layout()
-plt.savefig(RESULT_DIR / "exp1-delay.png")
+plt.savefig(RESULT_DIR / "delay.png")
