@@ -20,7 +20,11 @@ def tt_from_csv(start: datetime) -> Timetable | None:
     # Remove past time points from time table
     timetable.truncate_history(latest=start + timedelta(hours=1))
     # Get forecast data if necessary
-    timetable.append_forecast(start=start)
+    timetable.append_forecast(
+        start=start,
+        forecast_days=Config.get_forecast_days(),
+        lookback_days=Config.get_lookback_days(),
+    )
     return timetable
 
 

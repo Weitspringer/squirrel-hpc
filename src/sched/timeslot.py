@@ -1,6 +1,7 @@
 """Timeslot"""
 
 from datetime import datetime
+from typing import Any
 from uuid import uuid4
 
 
@@ -71,6 +72,10 @@ class ConstrainedTimeslot:
         self.reserved_resources.update({request_uuid: reservation})
         self.jobs.update({job_id: request_uuid})
         return request_uuid
+
+    def get_reservation(self, job_id: str) -> dict[str, Any] | None:
+        """Get reserved resources for a specific job ID."""
+        return self.reserved_resources.get(self.jobs.get(job_id))
 
     def remove_job(self, job_id: str) -> None:
         """Frees allocated resources."""
