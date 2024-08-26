@@ -12,7 +12,7 @@ from src.sched.scheduler import Scheduler, TemporalShifting
 def submit_sbatch(command: str, runtime: int, partitions: list[str]):
     """Submit a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
-        strategy=TemporalShifting(), cluster_info=Config.get_local_paths["sinfo_json"]
+        strategy=TemporalShifting(), cluster_info=Config.get_local_paths()["sinfo_json"]
     )
     now = datetime.now(tz=UTC)
     timetable = tt_from_csv(start=now)
@@ -33,7 +33,7 @@ def simulate_submit_sbatch(
 ):
     """Simulate submitting a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
-        strategy=TemporalShifting(), cluster_info=Config.get_local_paths["sinfo_json"]
+        strategy=TemporalShifting(), cluster_info=Config.get_local_paths()["sinfo_json"]
     )
     timetable = tt_from_csv(start=submit_date)
     start_timeslot, node = scheduler.schedule_sbatch(

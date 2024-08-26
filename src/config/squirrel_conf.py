@@ -1,23 +1,13 @@
 """Configuration for Squirrel."""
 
-import configparser
 from json import loads
 from pathlib import Path
 
+from src.config.ini_conf import IniConfig
 
-class SquirrelConfig:
-    """This class reads the config.ini file"""
 
-    def __init__(self, path):
-        self.conf = self._read_config(path)
-
-    def _read_config(self, config_file_path) -> configparser.ConfigParser:
-        config = configparser.ConfigParser()
-        config.read(config_file_path)
-        return config
-
-    def __str__(self):
-        return str(self.conf.items())
+class SquirrelConfig(IniConfig):
+    """Reads the squirrel config .ini file"""
 
     def get_local_paths(self) -> dict:
         """Returns paths to local resources."""
@@ -61,4 +51,6 @@ class SquirrelConfig:
         return int(self.conf.get("forecast.builtin", "lookback_days"))
 
 
-Config = SquirrelConfig(path="squirrel.ini")
+Config = SquirrelConfig(
+    path=Path(__file__).resolve().parent / ".." / ".." / "config" / "squirrel.cfg"
+)

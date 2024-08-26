@@ -4,8 +4,7 @@ from datetime import datetime
 from functools import reduce
 from pathlib import Path
 
-from src.cluster.commons import get_partitions
-from src.config.squirrel_conf import Config
+from src.cluster.commons import get_partitions, get_cpu_tdp, get_gpu_tdp
 from .timetable import Timetable, ConstrainedTimeslot
 
 
@@ -88,7 +87,7 @@ class PlanningStrategy(ABC):
         hours: int,
         timetable: Timetable,
         nodes: list[str],
-    ):
+    ) -> tuple[list[ConstrainedTimeslot], str]:
         pass
 
 
@@ -96,12 +95,8 @@ class CarbonAgnosticFifo(PlanningStrategy):
     """Carbon-agnostic first-in-first-out (fifo) scheduling strategy."""
 
     def allocate_resources(
-        self,
-        job_id: str,
-        hours: int,
-        timetable: Timetable,
-        nodes: list[str],
-    ) -> tuple[list[ConstrainedTimeslot], str]:
+        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+    ):
         timeslots = timetable.timeslots
         for start_hour in range(0, len(timeslots) - hours + 1):
             window = timeslots[start_hour : start_hour + hours]
@@ -118,12 +113,8 @@ class TemporalShifting(PlanningStrategy):
     """Carbon-aware temporal workload shifting."""
 
     def allocate_resources(
-        self,
-        job_id: str,
-        hours: int,
-        timetable: Timetable,
-        nodes: list[str],
-    ) -> tuple[list[ConstrainedTimeslot], str]:
+        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+    ):
         timeslots = timetable.timeslots
         # Find the window where the GCI impact is lowest.
         # NOTE: Jobs are assumed to be non-interruptible.
@@ -135,16 +126,55 @@ class TemporalShifting(PlanningStrategy):
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
             windows.update({weight: window})
-        # Sort nodes descending with regards to their carbon intensity and iterate over them
+        # Try to allocate window with low carbon intensity
         for _, window in dict(sorted(windows.items())).items():
             reserved_ts = []
-            # Try to reserve a single node during the timespan
+            # Reserve a single node during the timespan
             for node in nodes:
                 reserved_ts = _reserve_resources(
                     job_id=job_id, window=window, node=node
                 )
                 if reserved_ts:
                     return window, node
+        return None, None
+
+
+class SpatialShifting(PlanningStrategy):
+    def allocate_resources(
+        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+    ):
+        timeslots = timetable.timeslots
+        # Try to allocate node with lowest TDP possible.
+        nodes_and_tdp = {}
+        for node in nodes:
+            cpu_tdp = get_cpu_tdp(hostname=node)
+            if cpu_tdp is not None:
+                nodes_and_tdp.update({node: cpu_tdp})
+        sorted_nodes = sorted(nodes_and_tdp.items(), key=lambda x: x[1])
+        for i in range(len(sorted_nodes)):
+            node, tdp = sorted_nodes[i]
+            # Get distance to TDP of the next, worse option.
+            distance_next_tdp = None
+            if i < len(sorted_nodes) - 1:
+                distance_next_tdp = sorted_nodes[i + 1][1] - tdp
+            # Try to allocate a window of the current node for this job.
+            for start_hour in range(0, len(timeslots) - hours + 1):
+                window = timeslots[start_hour : start_hour + hours]
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
+                    return window, node
+                elif distance_next_tdp is not None:
+                    # If there is an equally suitable node, try next node to reduce delay.
+                    if distance_next_tdp == 0:
+                        # TODO: Load balancing for nodes with equal TDP (otherwise, the distribution is not optimal)
+                        break
+                    # Resonably delay jobs with regards to potential savings through spatial shifting.
+                    # Scales linear with amount of delay in hours compared to TDP difference to the next, worse option.
+                    if distance_next_tdp / 10 < start_hour:
+                        # TODO: Introduce offset to start this anew in case this "subwindow" is full.
+                        break
         return None, None
 
 

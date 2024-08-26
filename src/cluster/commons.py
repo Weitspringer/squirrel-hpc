@@ -10,6 +10,8 @@ from pathlib import Path
 from subprocess import call, PIPE, check_output
 from typing import Any
 
+from src.config.cluster_info import Config as AdditionalInfo
+
 
 def sbatch(suffix: str) -> str:
     """Execute sbatch with trailing suffix.
@@ -38,6 +40,24 @@ def read_sinfo(path_to_json: Path | None = None) -> dict:
 def get_nodes(path_to_json: Path | None = None) -> list[dict[str, Any]]:
     """Get all nodes of the cluster."""
     return read_sinfo(path_to_json=path_to_json).get("nodes")
+
+
+def get_cpu_tdp(hostname: str) -> int | None:
+    """Get thermal design power (TDP) of a node's CPUs.
+    The node is defined by its hostname.
+
+    If TDP was not provided, returns None.
+    """
+    return AdditionalInfo.get_cpu_tdp(node=hostname)
+
+
+def get_gpu_tdp(hostname: str) -> int | None:
+    """Get thermal design power (TDP) of a node's GPUs.
+    The node is defined by its hostname.
+
+    If TDP was not provided, returns None.
+    """
+    return AdditionalInfo.get_gpu_tdp(node=hostname)
 
 
 def get_partitions(path_to_json: Path | None = None) -> dict[str, dict[str, Any]]:

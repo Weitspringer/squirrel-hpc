@@ -18,7 +18,8 @@ viz/**/*.jpg
 viz/**/*.svg
 
 # Configuration
-squirrel.ini
+squirrel.cfg
+cluster_info.cfg
 
 # Artifacts
 schedule.csv
