@@ -18,8 +18,8 @@ START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOB_CONSUMPTION_WATTS = 150
 CLUSTER_PATH = Path("simulation") / "data" / "single-node-cluster.json"
-RESULT_DIR = Path("viz") / "simulation" / "exp1" / "constant"
-RESULT_DIR.mkdir(exist_ok=True)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "simulation" / "exp1" / "constant"
+RESULT_DIR.mkdir(exist_ok=True, parents=True)
 
 
 def _sim_schedule(

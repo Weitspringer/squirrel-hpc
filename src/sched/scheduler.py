@@ -4,7 +4,7 @@ from datetime import datetime
 from functools import reduce
 from pathlib import Path
 
-from src.cluster.commons import get_partitions, get_cpu_tdp, get_gpu_tdp
+from src.cluster.commons import get_partitions, get_cpu_tdp
 from .timetable import Timetable, ConstrainedTimeslot
 
 
@@ -80,6 +80,8 @@ class PlanningStrategy(ABC):
     strategies.
     """
 
+    # NOTE: Jobs are assumed to be non-interruptible.
+
     @abstractmethod
     def allocate_resources(
         self,
@@ -96,7 +98,7 @@ class CarbonAgnosticFifo(PlanningStrategy):
 
     def allocate_resources(
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
-    ):
+    ) -> tuple[list[ConstrainedTimeslot], str]:
         timeslots = timetable.timeslots
         for start_hour in range(0, len(timeslots) - hours + 1):
             window = timeslots[start_hour : start_hour + hours]
@@ -114,10 +116,9 @@ class TemporalShifting(PlanningStrategy):
 
     def allocate_resources(
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
-    ):
+    ) -> tuple[list[ConstrainedTimeslot], str]:
         timeslots = timetable.timeslots
         # Find the window where the GCI impact is lowest.
-        # NOTE: Jobs are assumed to be non-interruptible.
         fc_hours = len(timeslots)
         windows = {}
         for start_hour in range(0, fc_hours - hours + 1):
@@ -142,40 +143,112 @@ class TemporalShifting(PlanningStrategy):
 class SpatialShifting(PlanningStrategy):
     def allocate_resources(
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
-    ):
+    ) -> tuple[list[ConstrainedTimeslot], str]:
+        """Allocate node considering its TDP values."""
+
+        # Extract the available timeslots from the timetable.
         timeslots = timetable.timeslots
-        # Try to allocate node with lowest TDP possible.
-        nodes_and_tdp = {}
+
+        # Initialize dictionaries and lists to categorize nodes:
+        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
+        # 'blackbox' will store nodes without TDP information.
+        cpu_tdp_box = {}
+        blackbox = []
         for node in nodes:
             cpu_tdp = get_cpu_tdp(hostname=node)
             if cpu_tdp is not None:
-                nodes_and_tdp.update({node: cpu_tdp})
-        sorted_nodes = sorted(nodes_and_tdp.items(), key=lambda x: x[1])
+                cpu_tdp_box.update({node: cpu_tdp})
+            else:
+                blackbox.append(node)
+
+        # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
+        sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
+
+        # Initialize load balancer pools, which map starting hours to pools of nodes.
+        load_balance_pools = {}
+        curr_pool = []  # Temporary list to hold the current pool of nodes.
+        hour_marker = 0  # Tracks the starting hour for the current pool.
+
+        # Create pools of nodes based on the difference in their TDP values.
         for i in range(len(sorted_nodes)):
+            # Add the current node to the pool.
             node, tdp = sorted_nodes[i]
-            # Get distance to TDP of the next, worse option.
-            distance_next_tdp = None
+            curr_pool.append(node)
+
+            # Calculate the TDP difference to the next node.
             if i < len(sorted_nodes) - 1:
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
-            # Try to allocate a window of the current node for this job.
+
+            # If the TDP difference is non-zero, create a new pool.
+            if distance_next_tdp != 0:
+                # Calculate the next hour marker based on the TDP difference.
+                next_marker = hour_marker + int(distance_next_tdp / 10)
+
+                # Adjust the hour marker if it exceeds the available timeslots.
+                if not hour_marker <= len(timeslots) - hours:
+                    # Ensure marker is within bounds.
+                    hour_marker = len(timeslots) - hours
+                    # Merge the current pool with any existing pool at the last marker.
+                    if hour_marker in load_balance_pools.keys():
+                        prev_pool = load_balance_pools.get(len(timeslots) - hours)
+                        prev_pool += curr_pool
+                    else:
+                        load_balance_pools.update({hour_marker: curr_pool})
+                else:
+                    # Otherwise, add the current pool to the load balance pools.
+                    load_balance_pools.update({hour_marker: curr_pool})
+
+                # Move the hour marker forward and reset the current pool.
+                hour_marker = next_marker
+                curr_pool = []
+
+        # Initialize the list of allocation pools to try and allocate resources from.
+        alloc_pools = []
+        markers = list(load_balance_pools.keys())
+
+        # Iterate over the hour markers to allocate resources.
+        for i, marker in enumerate(markers):
+
+            # Determine the range of timeslots for the current pool.
+            if i < len(markers) - 1:
+                next_marker = markers[i + 1]
+            else:
+                next_marker = len(timeslots) - 1
+
+            # Add the current pool to the list of allocation pools.
+            alloc_pools.append(load_balance_pools.get(marker))
+            # Iterate through the available timeslots to find a valid window.
+            for start_hour in range(next_marker - 1):
+                window = timeslots[start_hour : start_hour + hours]
+                # Try to reserve resources using the pools in order.
+                for pool in alloc_pools:
+                    for node in pool:
+                        reserved_ts = _reserve_resources(
+                            job_id=job_id, window=window, node=node
+                        )
+                        # If resources are successfully reserved, return the window and node.
+                        if reserved_ts:
+                            return window, node
+        # As a last resort, consider black-box nodes without TDP information.
+        if len(blackbox) > 0:
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
-                reserved_ts = _reserve_resources(
-                    job_id=job_id, window=window, node=node
-                )
-                if reserved_ts:
-                    return window, node
-                elif distance_next_tdp is not None:
-                    # If there is an equally suitable node, try next node to reduce delay.
-                    if distance_next_tdp == 0:
-                        # TODO: Load balancing for nodes with equal TDP (otherwise, the distribution is not optimal)
-                        break
-                    # Resonably delay jobs with regards to potential savings through spatial shifting.
-                    # Scales linear with amount of delay in hours compared to TDP difference to the next, worse option.
-                    if distance_next_tdp / 10 < start_hour:
-                        # TODO: Introduce offset to start this anew in case this "subwindow" is full.
-                        break
+                for node in blackbox:
+                    reserved_ts = _reserve_resources(
+                        job_id=job_id, window=window, node=node
+                    )
+                    if reserved_ts:
+                        return window, node
+        # When reaching this point, allocation was unsuccessful
         return None, None
+
+
+class SpatiotemporalShifting(PlanningStrategy):
+    def allocate_resources(
+        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+    ) -> tuple[list[ConstrainedTimeslot], str]:
+        """Allocate node considering its TDP values and the grid carbon intensity."""
+        raise NotImplementedError
 
 
 def _reserve_resources(

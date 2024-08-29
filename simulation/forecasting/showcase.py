@@ -13,6 +13,7 @@ from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
+FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
 
 
 def demo(forecast_days: int, lookback_days: int):
@@ -33,7 +34,6 @@ def demo(forecast_days: int, lookback_days: int):
 
 
 def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
-    FC_VIZ_DIRECTORY.mkdir(parents=True, exist_ok=True)
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
