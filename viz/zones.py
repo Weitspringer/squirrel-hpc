@@ -56,7 +56,7 @@ def analyze(zones: list[str]) -> None:
     plt.ylabel("Coefficient of variation")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout(pad=1)
-    plt.savefig(RESULT_DIR / f"gci_in_zones.png")
+    plt.savefig(RESULT_DIR / f"gci_in_zones.pdf")
     cv_pairs = []
     for zone_stat in zone_stats:
         min_cv_dist = None

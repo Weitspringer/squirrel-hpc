@@ -30,7 +30,7 @@ def demo(forecast_days: int, lookback_days: int):
     plt.ylabel("gCO2-eq/kWh")
     plt.title("GCI Forecast")
     plt.tight_layout()
-    plt.savefig(FC_VIZ_DIRECTORY / "demo.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "demo.pdf")
 
 
 def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
@@ -91,7 +91,7 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
 
     # Tight layout and display plot
     plt.tight_layout()
-    plt.savefig(FC_VIZ_DIRECTORY / "simulation.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "simulation.pdf")
 
 
 def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: bool):
@@ -138,11 +138,11 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
                 round(median_pcc[i, j], 3),
                 ha="center",
                 va="center",
-                color="white" if median_pcc[i, j] > 0.8 else "black",
+                color="white" if median_pcc[i, j] > 0.7 else "black",
             )
     ax.title.set_text("Median PCC")
     plt.tight_layout()
-    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_pcc.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_pcc.pdf")
     plt.cla()
 
     # RMSE
@@ -163,7 +163,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
             )
     ax.title.set_text("Median RMSE")
     plt.tight_layout()
-    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_rmse.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_rmse.pdf")
     plt.cla()
 
     # Computation Time
@@ -184,7 +184,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
             )
     ax.title.set_text("Median computation time per forecast [s]")
     plt.tight_layout()
-    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_performance.png")
+    plt.savefig(FC_VIZ_DIRECTORY / "param_eval_performance.pdf")
     plt.cla()
 
 
