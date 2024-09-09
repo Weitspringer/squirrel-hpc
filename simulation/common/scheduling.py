@@ -43,27 +43,22 @@ def _sim_schedule(
     footprint = 0
     delays = []
     for index, slot in enumerate(timetable.timeslots):
-        if len(slot.reserved_resources) == 1:
-            for key, consumptions in jobs.items():
-                reservation = slot.get_reservation(key)
-                if reservation:
-                    watts = consumptions.get(reservation.get("node"))
-                    delays.append(index)
-                    footprint += slot.gci * (
-                        (watts / 1000)
-                        * (
-                            (
-                                datetime.fromisoformat(reservation.get("end"))
-                                - datetime.fromisoformat(reservation.get("start"))
-                            ).seconds
-                            / 60
-                            / 60
-                        )
+        for key, consumptions in jobs.items():
+            reservation = slot.get_reservation(key)
+            if reservation:
+                watts = consumptions.get(reservation.get("node"))
+                delays.append(index)
+                footprint += slot.gci * (
+                    (watts / 1000)
+                    * (
+                        (
+                            datetime.fromisoformat(reservation.get("end"))
+                            - datetime.fromisoformat(reservation.get("start"))
+                        ).seconds
+                        / 60
+                        / 60
                     )
-        elif len(slot.reserved_resources) > 1:
-            raise RuntimeError(
-                "Please use single-node configuration for this experiment!"
-            )
+                )
     return footprint, np.average(delays)
 
 
@@ -106,30 +101,25 @@ def _sim_schedule_forecasted(
     footprint = 0
     delays = []
     for index, slot in enumerate(timetable.timeslots):
-        if len(slot.reserved_resources) == 1:
-            for key, consumptions in jobs.items():
-                reservation = slot.get_reservation(key)
-                if reservation:
-                    watts = consumptions.get(reservation.get("node"))
-                    delays.append(index)
-                    real_gci = gci_hist.loc[
-                        gci_hist["time"] == pd.Timestamp(slot.start)
-                    ].iloc[0]["gci"]
-                    footprint += real_gci * (
-                        (watts / 1000)
-                        * (
-                            (
-                                datetime.fromisoformat(reservation.get("end"))
-                                - datetime.fromisoformat(reservation.get("start"))
-                            ).seconds
-                            / 60
-                            / 60
-                        )
+        for key, consumptions in jobs.items():
+            reservation = slot.get_reservation(key)
+            if reservation:
+                watts = consumptions.get(reservation.get("node"))
+                delays.append(index)
+                real_gci = gci_hist.loc[
+                    gci_hist["time"] == pd.Timestamp(slot.start)
+                ].iloc[0]["gci"]
+                footprint += real_gci * (
+                    (watts / 1000)
+                    * (
+                        (
+                            datetime.fromisoformat(reservation.get("end"))
+                            - datetime.fromisoformat(reservation.get("start"))
+                        ).seconds
+                        / 60
+                        / 60
                     )
-        elif len(slot.reserved_resources) > 1:
-            raise RuntimeError(
-                "Please use single-node configuration for this experiment!"
-            )
+                )
     return footprint, np.average(delays)
 
 
@@ -278,7 +268,7 @@ def main(
     plt.ylim(-0.2, 1)
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(result_dir / "result.png")
+    plt.savefig(result_dir / "result.pdf")
     plt.clf()
 
     ## Plot average job delay
@@ -291,4 +281,4 @@ def main(
     plt.xlabel("Hour of Day")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(result_dir / "delay.png")
+    plt.savefig(result_dir / "delay.pdf")
