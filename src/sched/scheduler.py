@@ -140,11 +140,59 @@ class TemporalShifting(PlanningStrategy):
         return None, None
 
 
+class SpatialGreedyShifting(PlanningStrategy):
+    def allocate_resources(
+        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+    ) -> tuple[list[ConstrainedTimeslot], str]:
+        """Allocate node considering its TDP values. Greedy version."""
+
+        # Extract the available timeslots from the timetable.
+        timeslots = timetable.timeslots
+
+        # Initialize dictionaries and lists to categorize nodes:
+        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
+        # 'blackbox' will store nodes without TDP information.
+        cpu_tdp_box = {}
+        blackbox = []
+        for node in nodes:
+            cpu_tdp = get_cpu_tdp(hostname=node)
+            if cpu_tdp is not None:
+                cpu_tdp_box.update({node: cpu_tdp})
+            else:
+                blackbox.append(node)
+
+        # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
+        sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
+        # Try to allocate resources greedy for "best" node
+        for i in range(len(sorted_nodes)):
+            node, _ = sorted_nodes[i]
+            for start_hour in range(0, len(timeslots) - hours + 1):
+                window = timeslots[start_hour : start_hour + hours]
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                # If resources are successfully reserved, return the window and node.
+                if reserved_ts:
+                    return window, node
+        # As a last resort, consider black-box nodes without TDP information.
+        if len(blackbox) > 0:
+            for start_hour in range(0, len(timeslots) - hours + 1):
+                window = timeslots[start_hour : start_hour + hours]
+                for node in blackbox:
+                    reserved_ts = _reserve_resources(
+                        job_id=job_id, window=window, node=node
+                    )
+                    if reserved_ts:
+                        return window, node
+        # When reaching this point, allocation was unsuccessful
+        return None, None
+
+
 class SpatialShifting(PlanningStrategy):
     def allocate_resources(
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
     ) -> tuple[list[ConstrainedTimeslot], str]:
-        """Allocate node considering its TDP values."""
+        """Allocate node considering its TDP values. Loadbalancing."""
 
         # Extract the available timeslots from the timetable.
         timeslots = timetable.timeslots
