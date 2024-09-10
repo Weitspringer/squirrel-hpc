@@ -152,42 +152,27 @@ def _compare(
     influx_options = Config.get_influx_config()["gci"]["history"]
     influx_options.get("tags").update({"zone": zone})
     for submit_date in submit_dates:
+        sim_method = _sim_schedule
         if not forecasted:
-            footprint_1, delay_1 = _sim_schedule(
-                strategy=strat_1,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
-            footprint_2, delay_2 = _sim_schedule(
-                strategy=strat_2,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
+            sim_method = _sim_schedule
         else:
-            footprint_1, delay_1 = _sim_schedule_forecasted(
-                strategy=strat_1,
-                submit_date=submit_date,
-                start_date=start,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
-            footprint_2, delay_2 = _sim_schedule_forecasted(
-                strategy=strat_2,
-                submit_date=submit_date,
-                start_date=start,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
+            sim_method = _sim_schedule_forecasted
+        footprint_1, delay_1 = sim_method(
+            strategy=strat_1,
+            submit_date=submit_date,
+            influx_options=influx_options,
+            jobs=jobs,
+            cluster_path=cluster_path,
+            hours=lookahead_hours,
+        )
+        footprint_2, delay_2 = sim_method(
+            strategy=strat_2,
+            submit_date=submit_date,
+            influx_options=influx_options,
+            jobs=jobs,
+            cluster_path=cluster_path,
+            hours=lookahead_hours,
+        )
         footprints_1.append(round(footprint_1, 2))
         delays_1.append(delay_1)
         footprints_2.append(round(footprint_2, 2))
