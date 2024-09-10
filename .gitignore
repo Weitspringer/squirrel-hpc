@@ -17,6 +17,7 @@ viz/**/*.jpeg
 viz/**/*.jpg
 viz/**/*.svg
 viz/**/*.pdf
+viz/**/*.csv
 
 # Configuration
 squirrel.cfg

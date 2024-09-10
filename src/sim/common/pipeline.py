@@ -240,25 +240,100 @@ def main(
     ##### Plotting
     hours = range(24)
 
-    ## Plot relative savings per hour of day
+    ## Set unique colors for zones
+    if len(zones) <= 8:
+        cm = plt.get_cmap("Set2")
+    elif len(zones) <= 10:
+        cm = plt.get_cmap("tab10")
+    elif len(zones) <= 20:
+        cm = plt.get_cmap("tab20")
+    else:
+        cm = plt.get_cmap("hsv")
+    cmaplist = [cm(1.0 * i / len(zones)) for i in range(len(zones))]
+    zone_colors = {}
+    for idx, color in enumerate(cmaplist):
+        zone_colors.update({zones[idx]: color})
+
+    stats = []
+    res_relative = {}
+    res_absolute = {}
+    res_avg_rel = {}
+    ## Plot savings
     for zone, footprints_2 in zoned_2_footprints.items():
-        ts_savings_hourly_median = np.ma.median(
-            np.subtract(
-                1, np.divide(footprints_2, zoned_1_footprints.get(zone))
-            ).reshape((days, 24)),
+        relative_savings = np.subtract(
+            1, np.divide(footprints_2, zoned_1_footprints.get(zone))
+        )
+        absolute_savings = np.subtract(zoned_1_footprints.get(zone), footprints_2)
+        min_sav_rel = round(np.min(relative_savings), 2)
+        max_sav_rel = round(np.max(relative_savings), 2)
+        min_sav_abs = round(np.min(absolute_savings), 2)
+        max_sav_abs = round(np.max(absolute_savings), 2)
+        stats.append(
+            {
+                "zone": zone,
+                "min_savings_rel": min_sav_rel,
+                "max_savings_rel": max_sav_rel,
+                "min_savings_gCO2eq": min_sav_abs,
+                "max_savings_gCO2eq": max_sav_abs,
+            }
+        )
+        savings_hourly_median = np.ma.median(
+            relative_savings.reshape((days, 24)),
             axis=0,
         )
-        plt.plot(hours, ts_savings_hourly_median, label=zone)
+        savings_hourly_absolute_median = np.ma.median(
+            absolute_savings.reshape((days, 24)), axis=0
+        )
+
+        res_relative.update({zone: savings_hourly_median})
+        res_absolute.update({zone: savings_hourly_absolute_median})
+        res_avg_rel.update(
+            {zone: (np.average(savings_hourly_median), zone_colors.get(zone))}
+        )
+
+    ### Plot relative savings per hour of day
+    for zone, res_rel in res_relative.items():
+        plt.plot(hours, res_rel, label=zone, color=zone_colors.get(zone))
     plt.ylabel("Median Fraction of Emissions Saved")
     plt.xlabel("Hour of Day")
     plt.legend(loc="upper left", ncols=len(zones))
     plt.ylim(-0.2, 1)
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(result_dir / "result.pdf")
+    plt.savefig(result_dir / "med-relative.pdf")
     plt.clf()
 
-    ## Plot absolute savings per hour of day
+    ### Plot average relative savings per hour of day (by zone)
+    res_avg_rel_sorted = dict(
+        sorted(res_avg_rel.items(), key=lambda item: item[1][0], reverse=True)
+    )
+    res_ar_values = list(map(lambda x: x[0], res_avg_rel_sorted.values()))
+    res_ar_colors = list(map(lambda x: x[1], res_avg_rel_sorted.values()))
+    plt.bar(
+        range(len(res_ar_values)),
+        res_ar_values,
+        align="center",
+        color=res_ar_colors,
+    )
+    plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
+    plt.ylim(0, 1)
+    plt.ylabel("Average of Median Relative Savings")
+    plt.grid(axis="y", linewidth=0.5)
+    plt.tight_layout()
+    plt.savefig(result_dir / "avg-med-relative.pdf")
+    plt.clf()
+
+    ### Plot absolute savings per hour of day
+    for zone, res_abs in res_absolute.items():
+        plt.plot(hours, res_abs, label=zone, color=zone_colors.get(zone))
+    plt.ylabel("Median Emissions Saved [gCO2eq]")
+    plt.yscale("log")
+    plt.xlabel("Hour of Day")
+    plt.legend(loc="upper left", ncols=len(zones))
+    plt.grid(axis="y", linewidth=0.5)
+    plt.tight_layout()
+    plt.savefig(result_dir / "med-absolute.pdf")
+    plt.clf()
 
     ## Plot average job delay
     for zone, ts_delays in zoned_2_delays.items():
@@ -271,3 +346,7 @@ def main(
     plt.legend()
     plt.tight_layout()
     plt.savefig(result_dir / "delay.pdf")
+
+    stats_df = pd.DataFrame(stats)
+    stats_df = stats_df.set_index(keys=["zone"])
+    stats_df.to_csv(result_dir / "stats.csv")
