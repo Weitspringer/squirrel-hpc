@@ -1,3 +1,5 @@
+"""Pipeline for comparison of two scheduling strategies."""
+
 from datetime import datetime, timedelta
 from multiprocessing import Queue, Process
 from pathlib import Path
@@ -253,11 +255,11 @@ def main(
     ##### Plotting
     hours = range(24)
 
-    # Plot savings per hour of day
-    for zone, ts_footprints in zoned_2_footprints.items():
+    ## Plot relative savings per hour of day
+    for zone, footprints_2 in zoned_2_footprints.items():
         ts_savings_hourly_median = np.ma.median(
             np.subtract(
-                1, np.divide(ts_footprints, zoned_1_footprints.get(zone))
+                1, np.divide(footprints_2, zoned_1_footprints.get(zone))
             ).reshape((days, 24)),
             axis=0,
         )
@@ -270,6 +272,8 @@ def main(
     plt.tight_layout()
     plt.savefig(result_dir / "result.pdf")
     plt.clf()
+
+    ## Plot absolute savings per hour of day
 
     ## Plot average job delay
     for zone, ts_delays in zoned_2_delays.items():

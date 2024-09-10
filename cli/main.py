@@ -5,7 +5,7 @@ from typing_extensions import Annotated
 
 import typer
 
-from cli import forecast, emaps
+from cli import forecast, emaps, scenarios
 from src.submit.sbatch import submit_sbatch, simulate_submit_sbatch
 
 app = typer.Typer()
@@ -21,6 +21,12 @@ app.add_typer(
     name="electricitymaps",
     help="Ingest data from Electricity Maps.",
     rich_help_panel="Data",
+)
+app.add_typer(
+    scenarios.app,
+    name="scenarios",
+    help="Reproduce scenario results.",
+    rich_help_panel="Simulation",
 )
 
 

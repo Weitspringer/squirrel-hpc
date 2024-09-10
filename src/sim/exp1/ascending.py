@@ -39,7 +39,7 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from src.sim.common.scheduling import main
+from sim.common.pipeline import main
 
 # Experiment configuration
 ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
@@ -53,18 +53,21 @@ JOBS = {
     "job5": {"c1": 250},
 }
 LOOKAHEAD_HOURS = 24
-CLUSTER_PATH = Path("simulation") / "data" / "single-node-cluster.json"
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "simulation" / "exp1" / "ascending"
+CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "ascending"
 
-main(
-    zones=ZONES,
-    start=START,
-    days=DAYS,
-    lookahead_hours=LOOKAHEAD_HOURS,
-    jobs=JOBS,
-    cluster_path=CLUSTER_PATH,
-    result_dir=RESULT_DIR,
-    strat_1=CarbonAgnosticFifo(),
-    strat_2=TemporalShifting(),
-    forecasting=False,
-)
+
+def run():
+    """Run this scenario."""
+    main(
+        zones=ZONES,
+        start=START,
+        days=DAYS,
+        lookahead_hours=LOOKAHEAD_HOURS,
+        jobs=JOBS,
+        cluster_path=CLUSTER_PATH,
+        result_dir=RESULT_DIR,
+        strat_1=CarbonAgnosticFifo(),
+        strat_2=TemporalShifting(),
+        forecasting=False,
+    )
