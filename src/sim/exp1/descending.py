@@ -43,7 +43,7 @@ from src.sim.common.pipeline import main
 
 # Experiment configuration
 ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
-START = "2023-08-01T00:00:00+00:00"
+START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOBS = {
     "job1": {"c1": 250},
