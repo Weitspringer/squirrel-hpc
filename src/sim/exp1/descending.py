@@ -39,12 +39,12 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from sim.common.pipeline import main
+from src.sim.common.pipeline import main
 
 # Experiment configuration
 ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
 START = "2023-01-01T00:00:00+00:00"
-DAYS = 364
+DAYS = 5
 JOBS = {
     "job1": {"c1": 250},
     "job2": {"c1": 200},
