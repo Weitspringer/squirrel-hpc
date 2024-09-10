@@ -327,7 +327,7 @@ def main(
     for zone, res_abs in res_absolute.items():
         plt.plot(hours, res_abs, label=zone, color=zone_colors.get(zone))
     plt.ylabel("Median Emissions Saved [gCO2eq]")
-    plt.yscale("log")
+    plt.ylim(-10, 200)
     plt.xlabel("Hour of Day")
     plt.legend(loc="upper left", ncols=len(zones))
     plt.grid(axis="y", linewidth=0.5)
