@@ -5,7 +5,7 @@ from typing_extensions import Annotated
 import typer
 
 from src.config.squirrel_conf import Config
-from simulation.forecasting.showcase import (
+from src.sim.forecasting.showcase import (
     demo as fc_demo,
     parameter_eval,
     visualize_simulation,

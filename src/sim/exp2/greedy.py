@@ -3,9 +3,9 @@
 from pathlib import Path
 
 from src.config.squirrel_conf import Config
-from src.sched.scheduler import CarbonAgnosticFifo, SpatialShifting
+from src.sched.scheduler import CarbonAgnosticFifo, SpatialGreedyShifting
 
-from simulation.common.scheduling import main
+from src.sim.common.scheduling import main
 
 # Experiment configuration
 ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
@@ -25,9 +25,7 @@ for i in range(10):
     )
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("simulation") / "data" / "multi-node-cluster.json"
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "simulation" / "exp2" / "loadbalancer"
-)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "simulation" / "exp2" / "greedy"
 
 main(
     zones=ZONES,
@@ -38,6 +36,6 @@ main(
     cluster_path=CLUSTER_PATH,
     result_dir=RESULT_DIR,
     strat_1=CarbonAgnosticFifo(),
-    strat_2=SpatialShifting(),
+    strat_2=SpatialGreedyShifting(),
     forecasting=False,
 )

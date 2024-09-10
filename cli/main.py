@@ -10,11 +10,21 @@ from src.submit.sbatch import submit_sbatch, simulate_submit_sbatch
 
 app = typer.Typer()
 
-app.add_typer(forecast.app, name="forecast")
-app.add_typer(emaps.app, name="electricitymaps")
+app.add_typer(
+    forecast.app,
+    name="forecast",
+    help="Forecasting simulation.",
+    rich_help_panel="Simulation",
+)
+app.add_typer(
+    emaps.app,
+    name="electricitymaps",
+    help="Ingest data from Electricity Maps.",
+    rich_help_panel="Data",
+)
 
 
-@app.command()
+@app.command(rich_help_panel="Squirrel")
 def submit(
     command: Annotated[
         str,
@@ -34,7 +44,7 @@ def submit(
     submit_sbatch(command=command, runtime=runtime, partitions=partition)
 
 
-@app.command()
+@app.command(rich_help_panel="Simulation")
 def simulate_submit(
     command: Annotated[
         str,
