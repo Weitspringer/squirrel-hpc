@@ -5,10 +5,10 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, SpatialShifting
 
-from sim.common.pipeline import main
+from src.sim.common.pipeline import main
 
 # Experiment configuration
-ZONES = ["DE", "FR", "GB", "PL", "US-MIDA-PJM"]
+ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "GB", "DE"]
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOBS = {}
