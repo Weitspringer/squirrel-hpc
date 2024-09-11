@@ -75,14 +75,18 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
 
     # Create secondary y-axis for RMSE
     ax2 = ax1.twinx()
-    ax2.step(metrics["time"], metrics["rmse"], "^-", color="red", alpha=0.3)
+    ax2.step(
+        metrics["time"], metrics["rmse"], "^-", color="red", alpha=0.3, where="post"
+    )
     ax2.set_ylabel("RMSE")
     ax2.yaxis.label.set_color("red")
     ax2.tick_params(axis="y", colors="red")
 
     # Create tertiary y-axis for PCC
     ax3 = ax1.twinx()
-    ax3.step(metrics["time"], metrics["pcc"], "^-", color="blue", alpha=0.3)
+    ax3.step(
+        metrics["time"], metrics["pcc"], "^-", color="blue", alpha=0.3, where="post"
+    )
     ax3.set_ylabel("PCC")
     ax3.set_ylim([-1, 1])
     ax3.yaxis.label.set_color("blue")

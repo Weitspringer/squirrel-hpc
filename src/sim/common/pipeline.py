@@ -300,7 +300,7 @@ def main(
     plt.ylim(-0.2, 1)
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(result_dir / "med-relative.pdf")
+    plt.savefig(result_dir / "savings-relative.pdf")
     plt.clf()
 
     ### Plot average relative savings per hour of day (by zone)
@@ -320,7 +320,7 @@ def main(
     plt.ylabel("Average of Median Relative Savings")
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(result_dir / "avg-med-relative.pdf")
+    plt.savefig(result_dir / "avg-savings-relative.pdf")
     plt.clf()
 
     ### Plot absolute savings per hour of day
@@ -328,11 +328,12 @@ def main(
         plt.plot(hours, res_abs, label=zone, color=zone_colors.get(zone))
     plt.ylabel("Median Emissions Saved [gCO2eq]")
     plt.xlabel("Hour of Day")
+    plt.ylim(-100, 1000)
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.yscale("log", base=10)
+    plt.yscale("symlog", base=10)
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(result_dir / "med-absolute.pdf")
+    plt.savefig(result_dir / "savings-absolute.pdf")
     plt.clf()
 
     ## Plot average job delay
@@ -342,7 +343,9 @@ def main(
         # plt.plot(hours, ca_hourly_delay, color="blue", label="FIFO")
         plt.plot(hours, ts_hourly_delay, label=zone, color=zone_colors.get(zone))
     plt.ylabel("Avg. Delay [hours]")
+    plt.ylim(0, hours)
     plt.xlabel("Hour of Day")
+    plt.grid(axis="y", linewidth=0.5)
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
     plt.savefig(result_dir / "delay.pdf")
