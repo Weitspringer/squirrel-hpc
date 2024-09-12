@@ -42,7 +42,7 @@ from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 from src.sim.common.pipeline import main
 
 # Experiment configuration
-ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "GB", "DE"]
+ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOBS = {
