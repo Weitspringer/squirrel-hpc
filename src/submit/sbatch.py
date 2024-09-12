@@ -6,7 +6,7 @@ from uuid import uuid4
 from src.cluster.commons import sbatch
 from src.config.squirrel_conf import Config
 from src.data.timetable import tt_from_csv, tt_to_csv
-from src.sched.scheduler import Scheduler, TemporalShifting, SpatialShifting
+from src.sched.scheduler import Scheduler, TemporalShifting
 
 
 def submit_sbatch(command: str, runtime: int, partitions: list[str]):
