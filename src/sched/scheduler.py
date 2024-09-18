@@ -102,6 +102,10 @@ class CarbonAgnosticFifo(PlanningStrategy):
         timeslots = timetable.timeslots
         for start_hour in range(0, len(timeslots) - hours + 1):
             window = timeslots[start_hour : start_hour + hours]
+            # Skip window if there is a full slot in it
+            full_slots = list(filter(lambda x: x.is_full(), window))
+            if len(full_slots) > 0:
+                continue
             for node in nodes:
                 reserved_ts = _reserve_resources(
                     job_id=job_id, window=window, node=node
@@ -125,7 +129,7 @@ class TemporalShifting(PlanningStrategy):
             # Map-reduce to calculate weight of current window
             window = timeslots[start_hour : start_hour + hours]
             # Skip window if there is a full slot in it
-            full_slots = filter(lambda x: not x.is_full(), window)
+            full_slots = list(filter(lambda x: x.is_full(), window))
             if len(full_slots) > 0:
                 continue
             window_gcis = list(map(lambda x: x.gci, window))
@@ -173,7 +177,7 @@ class SpatialGreedyShifting(PlanningStrategy):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = filter(lambda x: not x.is_full(), window)
+                full_slots = list(filter(lambda x: x.is_full(), window))
                 if len(full_slots) > 0:
                     continue
                 reserved_ts = _reserve_resources(
@@ -187,7 +191,7 @@ class SpatialGreedyShifting(PlanningStrategy):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = filter(lambda x: not x.is_full(), window)
+                full_slots = list(filter(lambda x: x.is_full(), window))
                 if len(full_slots) > 0:
                     continue
                 for node in blackbox:
@@ -281,7 +285,7 @@ class SpatialShifting(PlanningStrategy):
             for start_hour in range(next_marker - 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = filter(lambda x: not x.is_full(), window)
+                full_slots = list(filter(lambda x: x.is_full(), window))
                 if len(full_slots) > 0:
                     continue
                 # Try to reserve resources using the pools in order.
@@ -298,7 +302,7 @@ class SpatialShifting(PlanningStrategy):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = filter(lambda x: not x.is_full(), window)
+                full_slots = list(filter(lambda x: x.is_full(), window))
                 if len(full_slots) > 0:
                     continue
                 for node in blackbox:
