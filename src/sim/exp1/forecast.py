@@ -4,7 +4,7 @@ Timeshifting Experiment: Carbon-Aware Scheduling vs. FIFO
 
 This experiment investigates job scheduling on a single-node cluster ("c1") to compare two scheduling strategies:
 1. Carbon-Agnostic FIFO (First-In-First-Out)
-2. Temporal Shifting based on grid lifecycle emissions.
+2. Temporal Shifting based on (lifecycle) grid carbon intensity (GCI).
 
 **Experiment Setup:**
 - 5 jobs are submitted sequentially, each requiring 1 hour to complete.
@@ -17,11 +17,11 @@ This experiment investigates job scheduling on a single-node cluster ("c1") to c
 - The aim is to evaluate the environmental impact of the two scheduling strategies in terms of grid carbon emissions.
 
 **Global Grid Zones Analyzed:**
-- Germany (DE)
-- France (FR)
-- Great Britain (GB)
-- Poland (PL)
-- US-MIDA-PJM
+- Germany (DE) which has a very heterogeneous energy mix.
+- Iceland (IS) with low average GCI and low variability.
+- West India (IN-WE) with high average GCI and low variability.
+- Norway (NO) with low average GCI and medium variability. 
+- New South Wales, Australia (AUS-NSW) with high average GCI and medium variability.
 
 **Methodology:**
 - Schedulers have access to forecasted grid carbon intensity data for each zone, based on the values from the last 48 hours.
