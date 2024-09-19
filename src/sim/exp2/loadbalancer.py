@@ -8,7 +8,7 @@ from src.sched.scheduler import CarbonAgnosticFifo, SpatialShifting
 from src.sim.common.pipeline import main
 
 # Experiment configuration
-ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "GB", "DE"]
+ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOBS = {}
@@ -18,7 +18,7 @@ for i in range(10):
             f"job{i}": {
                 "c1": 50,
                 "c12": 50,
-                "c2": 57,
+                "c2": 65,
                 "g1": 60,
             }
         }

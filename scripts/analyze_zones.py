@@ -5,6 +5,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
@@ -35,10 +36,10 @@ plt.style.use("seaborn-v0_8")
 
 
 def analyze(zones: list[str]) -> None:
-    zone_stats = []
     cm = plt.get_cmap("tab20")
     ax = plt.gca()
     ax.set_prop_cycle(color=[cm(1.0 * i / len(zones)) for i in range(len(zones))])
+    stats = []
     for zone in zones:
         start = datetime.fromisoformat(f"{YEAR}-01-01T00:00:00+00:00")
         end = datetime.fromisoformat(f"{YEAR}-12-31T23:59:59+00:00")
@@ -50,38 +51,25 @@ def analyze(zones: list[str]) -> None:
         avg_gci = np.average(gci_hist["gci"])
         cv = np.std(gci_hist["gci"]) / np.mean(gci_hist["gci"])
         plt.plot(avg_gci, cv, "o", label=ZONE_LABELS[zone])
-        zone_stats.append((zone, avg_gci, cv))
+        # Write stats
+        stats.append(
+            {
+                "zone": zone,
+                "gci_cv": cv,
+                "gci_average": avg_gci,
+                "num_points": len(gci_hist),
+            }
+        )
     plt.title("Properties of GCI time series in different zones, 2023")
     plt.xlabel("Average grid carbon intensity [gCO2-eq./kWh]")
     plt.ylabel("Coefficient of variation")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout(pad=1)
     plt.savefig(RESULT_DIR / f"gci_in_zones.pdf")
-    cv_pairs = []
-    for zone_stat in zone_stats:
-        min_cv_dist = None
-        pair = ()
-        for other_stat in zone_stats:
-            if other_stat[0] == zone_stat[0]:
-                continue
-            cv_dist = abs(zone_stat[2] - other_stat[2])
-            if not min_cv_dist or min_cv_dist > cv_dist:
-                min_cv_dist = cv_dist
-                pair = (
-                    zone_stat[0],
-                    other_stat[0],
-                    cv_dist,
-                    abs(zone_stat[1] - other_stat[1]),
-                )
-        found_pair = False
-        for cv_pair in cv_pairs:
-            if (cv_pair[0] == pair[0] and cv_pair[1] == pair[1]) or (
-                cv_pair[1] == pair[0] and cv_pair[0] == pair[1]
-            ):
-                found_pair = True
-        if found_pair:
-            continue
-        cv_pairs.append(pair)
+    # Write stats
+    stat_df = pd.DataFrame(stats)
+    stat_df.set_index("zone", inplace=True)
+    stat_df.to_csv(RESULT_DIR / f"gci_in_zones_stats.csv")
 
 
 if __name__ == "__main__":
