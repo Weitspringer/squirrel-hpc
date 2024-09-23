@@ -100,12 +100,14 @@ class CarbonAgnosticFifo(PlanningStrategy):
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
     ) -> tuple[list[ConstrainedTimeslot], str]:
         timeslots = timetable.timeslots
+        # Iterate through timetable (sliding window)
         for start_hour in range(0, len(timeslots) - hours + 1):
             window = timeslots[start_hour : start_hour + hours]
             # Skip window if there is a full slot in it
             full_slots = list(filter(lambda x: x.is_full(), window))
             if len(full_slots) > 0:
                 continue
+            # Try to reserve a node within the window
             for node in nodes:
                 reserved_ts = _reserve_resources(
                     job_id=job_id, window=window, node=node
@@ -124,7 +126,8 @@ class TemporalShifting(PlanningStrategy):
         timeslots = timetable.timeslots
         # Find the window where the GCI impact is lowest.
         fc_hours = len(timeslots)
-        windows = {}
+        weighted_windows = {}
+        # Iterate through timetable (sliding window)
         for start_hour in range(0, fc_hours - hours + 1):
             # Map-reduce to calculate weight of current window
             window = timeslots[start_hour : start_hour + hours]
@@ -132,11 +135,12 @@ class TemporalShifting(PlanningStrategy):
             full_slots = list(filter(lambda x: x.is_full(), window))
             if len(full_slots) > 0:
                 continue
+            # Calculate weight of window
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
-            windows.update({weight: window})
-        # Try to allocate window with low carbon intensity
-        for _, window in dict(sorted(windows.items())).items():
+            weighted_windows.update({weight: window})
+        # Greedily allocate window with low carbon intensity
+        for _, window in dict(sorted(weighted_windows.items())).items():
             reserved_ts = []
             # Reserve a single node during the timespan
             for node in nodes:
@@ -208,7 +212,7 @@ class SpatialShifting(PlanningStrategy):
     def allocate_resources(
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
     ) -> tuple[list[ConstrainedTimeslot], str]:
-        """Allocate node considering its TDP values. Loadbalancing."""
+        """Allocate nodes considering their TDP values."""
 
         # Extract the available timeslots from the timetable.
         timeslots = timetable.timeslots
@@ -224,10 +228,8 @@ class SpatialShifting(PlanningStrategy):
                 cpu_tdp_box.update({node: cpu_tdp})
             else:
                 blackbox.append(node)
-
         # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
         sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
-
         # Initialize load balancer pools, which map starting hours to pools of nodes.
         load_balance_pools = {}
         curr_pool = []  # Temporary list to hold the current pool of nodes.
@@ -238,16 +240,13 @@ class SpatialShifting(PlanningStrategy):
             # Add the current node to the pool.
             node, tdp = sorted_nodes[i]
             curr_pool.append(node)
-
             # Calculate the TDP difference to the next node.
             if i < len(sorted_nodes) - 1:
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
-
             # If the TDP difference is non-zero, create a new pool.
             if distance_next_tdp != 0:
                 # Calculate the next hour marker based on the TDP difference.
                 next_marker = hour_marker + int(distance_next_tdp / 10)
-
                 # Adjust the hour marker if it exceeds the available timeslots.
                 if not hour_marker <= len(timeslots) - hours:
                     # Ensure marker is within bounds.
@@ -261,7 +260,6 @@ class SpatialShifting(PlanningStrategy):
                 else:
                     # Otherwise, add the current pool to the load balance pools.
                     load_balance_pools.update({hour_marker: curr_pool})
-
                 # Move the hour marker forward and reset the current pool.
                 hour_marker = next_marker
                 curr_pool = []
@@ -272,13 +270,11 @@ class SpatialShifting(PlanningStrategy):
 
         # Iterate over the hour markers to allocate resources.
         for i, marker in enumerate(markers):
-
             # Determine the range of timeslots for the current pool.
             if i < len(markers) - 1:
                 next_marker = markers[i + 1]
             else:
                 next_marker = len(timeslots) - 1
-
             # Add the current pool to the list of allocation pools.
             alloc_pools.append(load_balance_pools.get(marker))
             # Iterate through the available timeslots to find a valid window.
@@ -320,21 +316,74 @@ class SpatiotemporalShifting(PlanningStrategy):
         self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
     ) -> tuple[list[ConstrainedTimeslot], str]:
         """Allocate node considering its TDP values and the grid carbon intensity."""
-        raise NotImplementedError
+        timeslots = timetable.timeslots
+        # Spatial shifting preparation
+        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
+        # 'blackbox' will store nodes without TDP information.
+        cpu_tdp_box = {}
+        blackbox = []
+        for node in nodes:
+            cpu_tdp = get_cpu_tdp(hostname=node)
+            if cpu_tdp is not None:
+                cpu_tdp_box.update({node: cpu_tdp})
+            else:
+                blackbox.append(node)
+        # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
+        cpu_tdp_sorted_nodes = list(
+            map(lambda x: x[0], sorted(cpu_tdp_box.items(), key=lambda x: x[1]))
+        )
+
+        # Construct list of windows. They are weighted regarding their forecasted carbon impact.
+        fc_hours = len(timeslots)
+        weighted_windows = {}
+        for start_hour in range(0, fc_hours - hours + 1):
+            # Map-reduce to calculate weight of current window
+            window = timeslots[start_hour : start_hour + hours]
+            # Skip window if there is a full slot in it
+            full_slots = list(filter(lambda x: x.is_full(), window))
+            if len(full_slots) > 0:
+                continue
+            # Calculate weight of window
+            window_gcis = list(map(lambda x: x.gci, window))
+            weight = reduce(lambda x, y: x + y, window_gcis)
+            weighted_windows.update({weight: window})
+
+            # Greedily allocate window with low carbon intensity
+        for _, window in dict(sorted(weighted_windows.items())).items():
+            reserved_ts = []
+            # Reserve node (sorted after ascending TDP)
+            for node in cpu_tdp_sorted_nodes:
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
+                    return window, node
+            # Consider node with unknown TDP
+            for node in blackbox:
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
+                    return window, node
+        return None, None
 
 
 def _reserve_resources(
     job_id: str, window: list[ConstrainedTimeslot], node: str
 ) -> list[str] | None:
-    # Reserve resources for a whole window
+    """Try to reserve node for a whole window.
+
+    Allocates the whole timespan of the slots.
+    """
     reserved_ts = []
     for timeslot in window:
+        # If window contains a full timeslot, abort attempt.
         if timeslot.is_full():
             for ts in reserved_ts:
                 ts.remove_job(job_id)
             reserved_ts.clear()
-            break
-
+            return None
+        # TODO: Allow partial start and end times to support other runtimes than full hours.
         res_id = timeslot.allocate_node_exclusive(
             job_id=job_id,
             node_name=node,
