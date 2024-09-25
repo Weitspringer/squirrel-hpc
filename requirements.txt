@@ -7,7 +7,7 @@ idna==3.7
 influxdb-client==1.44.0
 kiwisolver==1.4.5
 matplotlib==3.9.2
-numpy==1.26.4
+numpy==2.1.1
 packaging==24.0
 pandas==2.2.2
 pillow==10.3.0
