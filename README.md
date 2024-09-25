@@ -6,7 +6,7 @@ Squirrel is a carbon-aware scheduler for Slurm workloads. This code is part of m
 
 - Python with **version 3.11** or above.
 - A running **InfluxDB** instance ([self-hosted](https://github.com/influxdata/influxdb) or [cloud](https://www.influxdata.com/get-influxdb/)).
-- The system has access to `sbatch` and the `sinfo` Slurm command.
+- You have access to `sbatch` and the `sinfo` Slurm command.
 
 ## Configuration
 
