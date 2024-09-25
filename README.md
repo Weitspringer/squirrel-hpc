@@ -1,6 +1,16 @@
 # Squirrel - Carbon-aware HPC Scheduling
+<div align="center">
+<img src="assets\logo-500px.png" alt="drawing" width="150"/>
+</div>
+Squirrel is a carbon-aware scheduler for Slurm batch jobs.
 
-Squirrel is a carbon-aware scheduler for Slurm workloads. This code is part of my Master Thesis at the Hasso-Plattner Institute (HPI) of the University of Postdam (UP).
+It is a bridge system between the user and Slurm.
+
+## Key Features
+- **Temporal shifting** based on the energy zone of the data center.
+- Intra-datacenter **spatial shifting** based on the nodes' TDP of CPUs and GPUs you provide.
+- Change scheduling strategies at runtime.
+- Built-in, configurable forecasting based on historical data.
 
 ## Prerequisites
 
