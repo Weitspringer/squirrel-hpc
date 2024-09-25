@@ -6,7 +6,7 @@ from typing_extensions import Annotated
 
 import typer
 
-from src.sim.exp1 import ascending, constant, descending, forecast
+from src.sim.exp1 import ascending, constant, descending, forecast, multinode
 
 app = typer.Typer()
 
@@ -18,6 +18,7 @@ class Exp1Enum(enum.Enum):
     CONS = "cons"
     DESC = "desc"
     FC = "desc+forecast"
+    MULTI = "cons+multi"
 
 
 @app.command()
@@ -34,3 +35,5 @@ def timeshift(
         descending.run()
     elif sc == Exp1Enum.FC.value:
         forecast.run()
+    elif sc == Exp1Enum.MULTI.value:
+        multinode.run()

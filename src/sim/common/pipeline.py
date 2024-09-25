@@ -66,7 +66,6 @@ def _sim_schedule(
 
 def _sim_schedule_forecasted(
     strategy: PlanningStrategy,
-    start_date: str,
     submit_date: datetime,
     influx_options: dict,
     jobs: dict[str, dict[str, int]],
@@ -79,8 +78,8 @@ def _sim_schedule_forecasted(
     """
     # Get ground truth GCI data
     gci_hist = get_gci_data(
-        start=datetime.fromisoformat(start_date),
-        stop=datetime.fromisoformat(start_date) + timedelta(days=hours + 1),
+        start=submit_date,
+        stop=submit_date + timedelta(hours=hours + 1),
         options=influx_options,
     )
     # Create scheduler
@@ -153,41 +152,25 @@ def _compare(
     influx_options.get("tags").update({"zone": zone})
     for submit_date in submit_dates:
         if not forecasted:
-            footprint_1, delay_1 = _sim_schedule(
-                strategy=strat_1,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
-            footprint_2, delay_2 = _sim_schedule(
-                strategy=strat_2,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
+            _sim_method = _sim_schedule
         else:
-            footprint_1, delay_1 = _sim_schedule_forecasted(
-                strategy=strat_1,
-                start_date=start,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
-            footprint_2, delay_2 = _sim_schedule_forecasted(
-                strategy=strat_2,
-                start_date=start,
-                submit_date=submit_date,
-                influx_options=influx_options,
-                jobs=jobs,
-                cluster_path=cluster_path,
-                hours=lookahead_hours,
-            )
+            _sim_method = _sim_schedule_forecasted
+        footprint_1, delay_1 = _sim_method(
+            strategy=strat_1,
+            submit_date=submit_date,
+            influx_options=influx_options,
+            jobs=jobs,
+            cluster_path=cluster_path,
+            hours=lookahead_hours,
+        )
+        footprint_2, delay_2 = _sim_method(
+            strategy=strat_2,
+            submit_date=submit_date,
+            influx_options=influx_options,
+            jobs=jobs,
+            cluster_path=cluster_path,
+            hours=lookahead_hours,
+        )
         footprints_1.append(round(footprint_1, 2))
         delays_1.append(delay_1)
         footprints_2.append(round(footprint_2, 2))
