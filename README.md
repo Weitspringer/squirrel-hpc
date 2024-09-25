@@ -24,8 +24,19 @@ See the [wiki page](https://github.com/Weitspringer/squirrel-hpc/wiki/Configurat
 
 ## Usage
 
-Navigate to the root directory of this repository.
+To submit an sbatch job, use 
+```bash
+python -m cli submit "<rest-of-the-slurm-arguments>" --time=<hours> --partition=<partition_names> --gpus-per-node=[type:]<number>
+```
 
-When issuing `sbatch` commands, replace `sbatch` with `./squirrel`. Additionally, you need to provide the runtime parameter (in hours) with `--runtime` and possible node partitions with `--partitions`.
+If you want to run Squirrel in simulation mode, use `python -m cli simulate-submit`. It also has the optional parameter `--submit_date=<isoformat-datestring>`.
 
-If you want to run Squirrel in simulation mode, use `./squirrel-sim`.
+### Shorten Command
+
+You can also shorten the command by setting an alias.
+
+```bash
+alias squirrel="python -m cli"
+
+squirrel submit [...]
+```
