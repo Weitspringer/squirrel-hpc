@@ -257,22 +257,39 @@ def main(
     res_absolute = {}
     res_avg_rel = {}
     ## Plot savings
+
+    small_size = 12
+    medium_size = 12
+    bigger_size = 12
+
+    plt.rc("font", size=small_size)  # controls default text sizes
+    plt.rc("axes", titlesize=small_size)  # fontsize of the axes title
+    plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=small_size)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=small_size)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=small_size)  # legend fontsize
+    plt.rc("figure", titlesize=bigger_size)  # fontsize of the figure title
+
     for zone, footprints_2 in zoned_2_footprints.items():
         relative_savings = np.subtract(
             1, np.divide(footprints_2, zoned_1_footprints.get(zone))
         )
         absolute_savings = np.subtract(zoned_1_footprints.get(zone), footprints_2)
-        min_sav_rel = round(np.min(relative_savings), 2)
-        max_sav_rel = round(np.max(relative_savings), 2)
-        min_sav_abs = round(np.min(absolute_savings), 2)
-        max_sav_abs = round(np.max(absolute_savings), 2)
+        min_sav_rel = round(np.min(relative_savings), 4)
+        max_sav_rel = round(np.max(relative_savings), 4)
+        med_sav_rel = round(np.median(relative_savings), 4)
+        min_sav_abs = round(np.min(absolute_savings), 4)
+        max_sav_abs = round(np.max(absolute_savings), 4)
+        med_sav_abs = round(np.median(absolute_savings), 4)
         stats.append(
             {
                 "zone": zone,
                 "min_savings_rel": min_sav_rel,
                 "max_savings_rel": max_sav_rel,
+                "med_savings_rel": med_sav_rel,
                 "min_savings_gCO2eq": min_sav_abs,
                 "max_savings_gCO2eq": max_sav_abs,
+                "med_savings_gCO2eq": med_sav_abs,
             }
         )
         savings_hourly_median = np.ma.median(
@@ -291,11 +308,17 @@ def main(
 
     ### Plot relative savings per hour of day
     for zone, res_rel in res_relative.items():
-        plt.plot(hours, res_rel, label=zone, color=zone_colors.get(zone))
+        plt.plot(
+            hours,
+            res_rel,
+            label=zone,
+            color=zone_colors.get(zone),
+            linewidth=3,
+            alpha=0.7,
+        )
     plt.ylabel("Median Fraction of Emissions Saved")
     plt.xlabel("Hour of Day")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.ylim(-0.2, 1)
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(res_relative))
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "savings-relative.pdf")
@@ -323,12 +346,19 @@ def main(
 
     ### Plot absolute savings per hour of day
     for zone, res_abs in res_absolute.items():
-        plt.plot(hours, res_abs, label=zone, color=zone_colors.get(zone))
+        plt.plot(
+            hours,
+            res_abs,
+            label=zone,
+            color=zone_colors.get(zone),
+            linewidth=3,
+            alpha=0.7,
+        )
     plt.ylabel("Median Emissions Saved [gCO2eq]")
     plt.xlabel("Hour of Day")
-    plt.ylim(-100, 1000)
+    # plt.ylim(-100, 1000)
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.yscale("symlog", base=10)
+    # plt.yscale("symlog", base=10)
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "savings-absolute.pdf")
@@ -339,7 +369,14 @@ def main(
         ts_hourly_delay = np.ma.median(np.reshape(ts_delays, (days, 24)), axis=0)
         # ca_hourly_delay = np.ma.median(np.reshape(ca_delays, (DAYS, 24)), axis=0)
         # plt.plot(hours, ca_hourly_delay, color="blue", label="FIFO")
-        plt.plot(hours, ts_hourly_delay, label=zone, color=zone_colors.get(zone))
+        plt.plot(
+            hours,
+            ts_hourly_delay,
+            label=zone,
+            color=zone_colors.get(zone),
+            linewidth=3,
+            alpha=0.7,
+        )
     plt.ylabel("Avg. Delay [hours]")
     plt.ylim(0, 24)
     plt.xlabel("Hour of Day")
@@ -347,6 +384,7 @@ def main(
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
     plt.tight_layout()
     plt.savefig(result_dir / "delay.pdf")
+    plt.clf()
 
     stats_df = pd.DataFrame(stats)
     stats_df = stats_df.set_index(keys=["zone"])

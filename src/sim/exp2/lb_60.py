@@ -1,4 +1,4 @@
-"""Spatial shifting experiment with loadbalancer strategy, 90% utilization on each node."""
+"""Spatial shifting experiment with loadbalancer strategy, 60% utilization on each node."""
 
 from pathlib import Path
 
@@ -16,16 +16,16 @@ for i in range(10):
     JOBS.update(
         {
             f"job{i}": {
-                "c1": 112.5,
-                "c12": 112.5,
-                "c2": 202.5,
-                "g1": 162,
+                "c1": 75,
+                "c12": 75,
+                "c2": 135,
+                "g1": 108,
             }
         }
     )
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "multi-node-cluster.json"
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp2" / "lb-90"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp2" / "lb_60"
 
 main(
     zones=ZONES,
