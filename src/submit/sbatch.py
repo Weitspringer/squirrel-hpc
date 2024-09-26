@@ -19,7 +19,12 @@ def submit_sbatch(
     now = datetime.now(tz=UTC)
     timetable = tt_from_csv(start=now)
     start_timeslot, node = scheduler.schedule_sbatch(
-        timetable=timetable, job_id=str(uuid4()), hours=runtime, partitions=partitions
+        timetable=timetable,
+        job_id=str(uuid4()),
+        hours=runtime,
+        partitions=partitions,
+        num_gpus=num_gpus,
+        gpu_name=gpu_name,
     )
     delta = (start_timeslot - now).seconds
     print(
@@ -45,7 +50,12 @@ def simulate_submit_sbatch(
     )
     timetable = tt_from_csv(start=submit_date)
     start_timeslot, node = scheduler.schedule_sbatch(
-        timetable=timetable, job_id=str(uuid4()), hours=runtime, partitions=partitions
+        timetable=timetable,
+        job_id=str(uuid4()),
+        hours=runtime,
+        partitions=partitions,
+        num_gpus=num_gpus,
+        gpu_name=gpu_name,
     )
     delta = (start_timeslot - submit_date).seconds
     print(f"Schedule job on node {node} in {delta} seconds.")
