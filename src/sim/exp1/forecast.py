@@ -1,5 +1,6 @@
 """
 Timeshifting Experiment: Carbon-Aware Scheduling vs. FIFO
++ Custom Forecasting
 
 This experiment investigates job scheduling on a single-node cluster ("c1") to compare two scheduling strategies:
 1. Carbon-Agnostic FIFO (First-In-First-Out)
@@ -7,12 +8,12 @@ This experiment investigates job scheduling on a single-node cluster ("c1") to c
 
 **Experiment Setup:**
 - 5 jobs are submitted sequentially, each requiring 1 hour to complete.
-- The jobs the same power demand (wattage) on node "c1":
-  - Job 1: 150W
-  - Job 2: 150W
+- The jobs have decreasing power demands (wattage) on node "c1":
+  - Job 1: 250W
+  - Job 2: 200W
   - Job 3: 150W
-  - Job 4: 150W
-  - Job 5: 150W
+  - Job 4: 100W
+  - Job 5: 50W
 - The aim is to evaluate the environmental impact of the two scheduling strategies in terms of grid carbon emissions.
 
 **Global Grid Zones Analyzed:**
@@ -23,7 +24,7 @@ This experiment investigates job scheduling on a single-node cluster ("c1") to c
 - New South Wales, Australia (AUS-NSW) with high average GCI and medium variability.
 
 **Methodology:**
-- Schedulers have access to real-time grid carbon intensity data for each zone.
+- Schedulers have access to forecasted grid carbon intensity data for each zone, based on the values from the last 48 hours.
 - Both scheduling approaches are able to schedule jobs within a 24-hour window, factoring in grid conditions.
 - The experiment runs for every hour of the day using historical grid data from 2023.
 - The analysis calculates:
@@ -39,24 +40,22 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from src.sim.common.pipeline import main, plot
+from src.sim.common.pipeline import main
 
 # Experiment configuration
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-START = "2023-01-01T00:00:00+00:00"
-DAYS = 364
+START = "2023-01-03T00:00:00+00:00"
+DAYS = 362
 JOBS = {
-    "job1": {"c1": 150},
-    "job2": {"c1": 150},
+    "job1": {"c1": 250},
+    "job2": {"c1": 200},
     "job3": {"c1": 150},
-    "job4": {"c1": 150},
-    "job5": {"c1": 150},
+    "job4": {"c1": 100},
+    "job5": {"c1": 50},
 }
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "constant"
-)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "forecast"
 
 
 def run():
@@ -71,10 +70,5 @@ def run():
         result_dir=RESULT_DIR,
         strat_1=CarbonAgnosticFifo(),
         strat_2=TemporalShifting(),
-        forecasting=False,
+        forecasting=True,
     )
-
-
-def visualize():
-    """Plot the results."""
-    plot(days=DAYS, result_dir=RESULT_DIR)
