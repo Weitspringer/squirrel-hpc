@@ -4,7 +4,12 @@ from datetime import datetime
 from functools import reduce
 from pathlib import Path
 
-from src.cluster.commons import get_partitions, get_cpu_tdp
+from src.cluster.commons import get_partitions, get_cpu_tdp, get_gpu_tdp
+from src.errors.scheduling import (
+    NoWindowAllocatedException,
+    NoSuitableNodeException,
+    JobTooLongException,
+)
 from .timetable import Timetable, ConstrainedTimeslot
 
 
@@ -45,30 +50,79 @@ class Scheduler:
         job_id: str,
         hours: int,
         partitions: list[str],
+        num_gpus: int | None = None,
+        gpu_name: str | None = None,
     ) -> tuple[datetime, str]:
         """
         Delegates job scheduling to the Strategy object instead of
         implementing multiple versions of the algorithm on its own.
         """
         r_window = None
+        uses_gpu = num_gpus is not None
         if hours <= len(timetable.timeslots):
-            nodes = self._get_nodeset(partitions=partitions)
+            nodes = self._get_nodeset(
+                partitions=partitions, num_gpus=num_gpus, gpu_name=gpu_name
+            )
+            if len(nodes) == 0:
+                raise NoSuitableNodeException(
+                    "There is no node which satifies the GPU requirements."
+                )
             r_window, r_node = self._strategy.allocate_resources(
-                job_id=job_id, hours=hours, timetable=timetable, nodes=nodes
+                job_id=job_id,
+                hours=hours,
+                timetable=timetable,
+                nodes=nodes,
+                uses_gpu=uses_gpu,
+            )
+        else:
+            raise JobTooLongException(
+                f"You requested {hours} hours. The maximum amount is {len(timetable.timeslots)} hours."
             )
         if not r_window:
-            raise RuntimeError("Can not allocate job.")
+            raise NoWindowAllocatedException("The schedule is full.")
         return r_window[0].start, r_node
 
-    def _get_nodeset(self, partitions: list[str]) -> list[str]:
-        # Get suitable nodes based on partitions
+    def _get_nodeset(
+        self,
+        partitions: list[str],
+        num_gpus: int | None = None,
+        gpu_name: str | None = None,
+    ) -> list[str]:
+        # Get suitable nodes based on partitions and requested GPUs
         cluster = get_partitions(path_to_json=self._cluster_info)
         nodes = set()
         for partition, p_nodes in cluster.items():
+            # Filter partitions
             if partition in partitions:
                 for p_node in p_nodes:
+                    # Analyze generic resources of node
+                    if not self._gres_matches(p_node["gres"], num_gpus, gpu_name):
+                        continue
                     nodes.add(p_node["hostname"])
         return nodes
+
+    def _gres_matches(
+        self, gres: str, num_gpus: int | None, gpu_name: str | None
+    ) -> bool:
+        """Check generic resource string and if the requirements are met."""
+        if num_gpus:
+            if gres == "":
+                return False
+            gres_list = gres.split(",")
+            for gres_item in gres_list:
+                gres_type = gres_item.split(":")[0]
+                # Check if GPUs can be reserved
+                if gres_type == "gpu":
+                    gres_number = int(gres_item.split(":")[2].split("(")[0])
+                    if gres_number >= num_gpus:
+                        # If user provided GPU name, gres name must match
+                        if gpu_name:
+                            gres_name = gres_item.split(":")[1]
+                            if gres_name != gpu_name:
+                                continue
+                        return True
+            return False
+        return True
 
 
 class PlanningStrategy(ABC):
@@ -89,7 +143,11 @@ class PlanningStrategy(ABC):
         hours: int,
         timetable: Timetable,
         nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
+        """Exclusively allocate nodes for consecutive window in the timetable.
+        The length of the window is determined by the specified hours.
+        """
         pass
 
 
@@ -97,7 +155,12 @@ class CarbonAgnosticFifo(PlanningStrategy):
     """Carbon-agnostic first-in-first-out (fifo) scheduling strategy."""
 
     def allocate_resources(
-        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+        self,
+        job_id: str,
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
         timeslots = timetable.timeslots
         # Iterate through timetable (sliding window)
@@ -121,7 +184,12 @@ class TemporalShifting(PlanningStrategy):
     """Carbon-aware temporal workload shifting."""
 
     def allocate_resources(
-        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+        self,
+        job_id: str,
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
         timeslots = timetable.timeslots
         # Find the window where the GCI impact is lowest.
@@ -154,7 +222,12 @@ class TemporalShifting(PlanningStrategy):
 
 class SpatialGreedyShifting(PlanningStrategy):
     def allocate_resources(
-        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+        self,
+        job_id: str,
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
         """Allocate node considering its TDP values. Greedy version."""
 
@@ -210,7 +283,12 @@ class SpatialGreedyShifting(PlanningStrategy):
 
 class SpatialShifting(PlanningStrategy):
     def allocate_resources(
-        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+        self,
+        job_id: str,
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
         """Allocate nodes considering their TDP values."""
 
@@ -218,18 +296,21 @@ class SpatialShifting(PlanningStrategy):
         timeslots = timetable.timeslots
 
         # Initialize dictionaries and lists to categorize nodes:
-        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
+        # 'tdp_box' will store nodes with their corresponding TDP values.
         # 'blackbox' will store nodes without TDP information.
-        cpu_tdp_box = {}
+        tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(hostname=node)
-            if cpu_tdp is not None:
-                cpu_tdp_box.update({node: cpu_tdp})
+            if uses_gpu:
+                tdp = get_gpu_tdp(hostname=node)
+            else:
+                tdp = get_cpu_tdp(hostname=node)
+            if tdp is not None:
+                tdp_box.update({node: tdp})
             else:
                 blackbox.append(node)
         # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
-        sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
+        sorted_nodes = sorted(tdp_box.items(), key=lambda x: x[1])
         # Initialize load balancer pools, which map starting hours to pools of nodes.
         load_balance_pools = {}
         curr_pool = []  # Temporary list to hold the current pool of nodes.
@@ -313,7 +394,12 @@ class SpatialShifting(PlanningStrategy):
 
 class SpatiotemporalShifting(PlanningStrategy):
     def allocate_resources(
-        self, job_id: str, hours: int, timetable: Timetable, nodes: list[str]
+        self,
+        job_id: str,
+        hours: int,
+        timetable: Timetable,
+        nodes: list[str],
+        uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
         """Allocate node considering its TDP values and the grid carbon intensity."""
         timeslots = timetable.timeslots
