@@ -1,14 +1,18 @@
 """
 Timeshifting Experiment: Carbon-Aware Scheduling vs. FIFO
-+ Multi node cluster
 
-This experiment investigates job scheduling on a multi-node cluster to compare two scheduling strategies:
+This experiment investigates job scheduling on a single-node cluster ("c1") to compare two scheduling strategies:
 1. Carbon-Agnostic FIFO (First-In-First-Out)
 2. Temporal Shifting based on (lifecycle) grid carbon intensity (GCI).
 
 **Experiment Setup:**
-- 20 jobs are submitted sequentially, each requiring 1 hour to complete.
-- All jobs the same power demand (wattage) of 150 Watts on nodes "c1", "c12", "c2", "g1":
+- 5 jobs are submitted sequentially, each requiring 1 hour to complete.
+- The jobs the same power demand (wattage) on node "c1":
+  - Job 1: 150W
+  - Job 2: 150W
+  - Job 3: 150W
+  - Job 4: 150W
+  - Job 5: 150W
 - The aim is to evaluate the environmental impact of the two scheduling strategies in terms of grid carbon emissions.
 
 **Global Grid Zones Analyzed:**
@@ -35,29 +39,22 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from src.sim.common.pipeline import main, plot
+from src.sim.common.pipeline import main
 
 # Experiment configuration
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
-JOBS = {}
-for i in range(20):
-    JOBS.update(
-        {
-            f"job{i}": {
-                "c1": 150,
-                "c12": 150,
-                "c2": 150,
-                "g1": 150,
-            }
-        }
-    )
+JOBS = {
+    "job1": {"c1": 150},
+    "job2": {"c1": 150},
+    "job3": {"c1": 150},
+    "job4": {"c1": 150},
+    "job5": {"c1": 150},
+}
 LOOKAHEAD_HOURS = 24
-CLUSTER_PATH = Path("src") / "sim" / "data" / "multi-node-cluster.json"
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "constant+multi"
-)
+CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "constant"
 
 
 def run():
@@ -74,8 +71,3 @@ def run():
         strat_2=TemporalShifting(),
         forecasting=False,
     )
-
-
-def visualize():
-    """Plot the results."""
-    plot(days=DAYS, result_dir=RESULT_DIR)
