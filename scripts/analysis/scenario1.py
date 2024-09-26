@@ -7,10 +7,12 @@ import pandas as pd
 from src.config.squirrel_conf import Config
 
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-constres = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "constant"
-ascres = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "ascending"
-descres = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "descending"
-res = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "summary"
+constres = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "constant"
+ascres = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "ascending"
+descres = (
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "descending"
+)
+res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "summary"
 res.mkdir(exist_ok=True, parents=True)
 
 ## Set unique colors for zones
@@ -71,4 +73,4 @@ ax.set_xticklabels(utilizations)
 plt.grid(axis="y", linewidth=0.5)
 plt.ylim(0, 0.37)
 plt.tight_layout()
-plt.savefig(res / "temporal.pdf")
+plt.savefig(res / "scenario1.pdf")

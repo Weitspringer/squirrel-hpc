@@ -6,8 +6,8 @@ from typing_extensions import Annotated
 
 import typer
 
-from src.sim.exp1 import ascending, constant, descending, forecast, multinode
-from src.sim.exp2 import lb_30, lb_60, lb_90
+from src.sim.scenario1 import ascending, constant, descending, forecast, multinode
+from src.sim.scenario2 import lb_30, lb_60, lb_90
 
 app = typer.Typer()
 

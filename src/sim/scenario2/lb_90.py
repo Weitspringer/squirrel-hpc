@@ -25,7 +25,7 @@ for i in range(10):
     )
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "multi-node-cluster.json"
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp2" / "lb_90"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_90"
 
 
 def run():

@@ -54,7 +54,9 @@ JOBS = {
 }
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp1" / "descending"
+RESULT_DIR = (
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "descending"
+)
 
 
 def run():

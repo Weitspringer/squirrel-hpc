@@ -18,7 +18,7 @@ DAYS = 31
 MAX_JOBS = 32
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "multi-node-cluster.json"
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp3" / "test"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario3" / "test"
 
 max_rel_savings_per_country = {}
 for zone in ZONES:
