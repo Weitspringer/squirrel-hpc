@@ -39,7 +39,7 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from src.sim.common.pipeline import main
+from src.sim.common.pipeline import main, plot
 
 # Experiment configuration
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
@@ -71,3 +71,8 @@ def run():
         strat_2=TemporalShifting(),
         forecasting=False,
     )
+
+
+def visualize():
+    """Plot the results."""
+    plot(days=DAYS, result_dir=RESULT_DIR)

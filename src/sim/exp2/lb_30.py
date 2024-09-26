@@ -5,7 +5,7 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, SpatialShifting
 
-from src.sim.common.pipeline import main
+from src.sim.common.pipeline import main, plot
 
 # Experiment configuration
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
@@ -27,15 +27,23 @@ LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "multi-node-cluster.json"
 RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "exp2" / "lb_30"
 
-main(
-    zones=ZONES,
-    start=START,
-    days=DAYS,
-    lookahead_hours=LOOKAHEAD_HOURS,
-    jobs=JOBS,
-    cluster_path=CLUSTER_PATH,
-    result_dir=RESULT_DIR,
-    strat_1=CarbonAgnosticFifo(),
-    strat_2=SpatialShifting(),
-    forecasting=False,
-)
+
+def run():
+    """Run this scenario."""
+    main(
+        zones=ZONES,
+        start=START,
+        days=DAYS,
+        lookahead_hours=LOOKAHEAD_HOURS,
+        jobs=JOBS,
+        cluster_path=CLUSTER_PATH,
+        result_dir=RESULT_DIR,
+        strat_1=CarbonAgnosticFifo(),
+        strat_2=SpatialShifting(),
+        forecasting=False,
+    )
+
+
+def visualize():
+    """Plot the results."""
+    plot(days=DAYS, result_dir=RESULT_DIR)

@@ -27,18 +27,6 @@ zone_colors = {}
 for idx, color in enumerate(cmaplist):
     zone_colors.update({ZONES[idx]: color})
 
-small_size = 12
-medium_size = 12
-bigger_size = 12
-
-plt.rc("font", size=small_size)  # controls default text sizes
-plt.rc("axes", titlesize=small_size)  # fontsize of the axes title
-plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
-plt.rc("xtick", labelsize=small_size)  # fontsize of the tick labels
-plt.rc("ytick", labelsize=small_size)  # fontsize of the tick labels
-plt.rc("legend", fontsize=small_size)  # legend fontsize
-plt.rc("figure", titlesize=bigger_size)  # fontsize of the figure title
-
 utilizations = ("Constant", "Ascending", "Descending")
 # Constant watt usage
 constres = pd.read_csv(constres / "stats.csv")

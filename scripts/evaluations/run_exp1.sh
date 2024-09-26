@@ -1,5 +1,6 @@
-python -m cli scenarios timeshift asc
-python -m cli scenarios timeshift desc
-python -m cli scenarios timeshift cons
-python -m cli scenarios timeshift desc+forecast
-python -m cli scenarios timeshift cons+multi
+python -m cli scenarios temporal asc
+python -m cli scenarios temporal desc
+python -m cli scenarios temporal cons
+python -m cli scenarios temporal desc+forecast
+python -m cli scenarios temporal cons+multi
+python -m cli scenarios visualize
