@@ -7,10 +7,26 @@ import pandas as pd
 from src.config.squirrel_conf import Config
 
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-constres = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "constant"
-ascres = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "ascending"
+constres = (
+    Config.get_local_paths()["viz_path"]
+    / "scenarios"
+    / "scenario1"
+    / "constant"
+    / "data"
+)
+ascres = (
+    Config.get_local_paths()["viz_path"]
+    / "scenarios"
+    / "scenario1"
+    / "ascending"
+    / "data"
+)
 descres = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "descending"
+    Config.get_local_paths()["viz_path"]
+    / "scenarios"
+    / "scenario1"
+    / "descending"
+    / "data"
 )
 res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "summary"
 res.mkdir(exist_ok=True, parents=True)

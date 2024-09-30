@@ -7,9 +7,15 @@ import pandas as pd
 from src.config.squirrel_conf import Config
 
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-lb30res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_30"
-lb60res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_60"
-lb90res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_90"
+lb30res = (
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_30" / "data"
+)
+lb60res = (
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_60" / "data"
+)
+lb90res = (
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "lb_90" / "data"
+)
 res = Config.get_local_paths()["viz_path"] / "scenarios" / "scenario2" / "summary"
 res.mkdir(exist_ok=True, parents=True)
 
