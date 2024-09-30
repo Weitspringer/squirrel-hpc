@@ -148,7 +148,7 @@ def _compare(
     delays_1 = []
     footprints_2 = []
     delays_2 = []
-    influx_options = Config.get_influx_config()["gci"]["history"]
+    influx_options = Config.get_influx_config()["gci"]["forecast"]
     influx_options.get("tags").update({"zone": zone})
     for submit_date in submit_dates:
         if not forecasted:
