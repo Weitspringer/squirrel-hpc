@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import json
 from pathlib import Path
 
+from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 from src.sched.timeslot import ConstrainedTimeslot
@@ -54,12 +55,22 @@ class Timetable:
         options: dict | None = None,
     ):
         """Append timeslots using the forecast starting at a certain time."""
-        start_point = start - timedelta(days=lookback_days, hours=1)
-        gci_history = get_gci_data(start=start_point, stop=start, options=options)
-        # TODO: Get forecast from InfluxDB
-        forecast = builtin_forecast_gci(
-            gci_history, days=forecast_days, lookback=lookback_days
-        )
+        if Config.use_builtin_forecast():
+            if not options:
+                options = Config.get_influx_config()["gci"]["history"]
+            start_point = start - timedelta(days=lookback_days, hours=1)
+            gci_history = get_gci_data(start=start_point, stop=start, options=options)
+            forecast = builtin_forecast_gci(
+                gci_history, days=forecast_days, lookback=lookback_days
+            )
+        else:
+            if not options:
+                options = Config.get_influx_config()["gci"]["forecast"]
+            forecast = get_gci_data(
+                start=start,
+                stop=start + timedelta(days=forecast_days),
+                options=options,
+            )
         # Create new time slots
         for _, row in forecast.iterrows():
             ts = ConstrainedTimeslot(

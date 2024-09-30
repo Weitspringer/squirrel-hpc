@@ -22,7 +22,7 @@ class SquirrelConfig(IniConfig):
         conf_dict = self.conf["influxdb"]
         hist_dict = self.conf["influxdb.gci.history"]
         fc_dict = self.conf["influxdb.gci.forecast"]
-        return {
+        c_dict = {
             "url": conf_dict["url"],
             "org": conf_dict["org"],
             "token": conf_dict["token"],
@@ -37,10 +37,15 @@ class SquirrelConfig(IniConfig):
                     "bucket": fc_dict["bucket"],
                     "measurement": fc_dict["measurement"],
                     "field": fc_dict["field"],
-                    "tags": loads(hist_dict["tags"]),
+                    "tags": loads(fc_dict["tags"]),
                 },
             },
         }
+        return c_dict
+
+    def use_builtin_forecast(self) -> bool:
+        """Check if forecast should be used built-in or should be fetched."""
+        return self.conf.getboolean("forecast", "use_builtin")
 
     def get_forecast_days(self) -> int:
         """Get amount of days for the forecast."""
