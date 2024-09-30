@@ -57,21 +57,22 @@ def submit(
     """Submit an sbatch job."""
     # Parse arguments
     partitions = partition.split(",") if partition is not None else None
-    gpu_options = gpus_per_node.split(":")
     num_gpus = None
     gpu_name = None
-    if len(gpu_options) == 2:
-        gpu_name = gpu_options[0]
-        num_gpus = int(gpu_options[1])
-    elif len(gpu_options) == 1:
-        try:
-            num_gpus = int(gpu_options[0])
-        except ValueError as _:
+    if gpus_per_node:
+        gpu_options = gpus_per_node.split(":")
+        if len(gpu_options) == 2:
+            gpu_name = gpu_options[0]
+            num_gpus = int(gpu_options[1])
+        elif len(gpu_options) == 1:
+            try:
+                num_gpus = int(gpu_options[0])
+            except ValueError as _:
+                print("GPU options should be given in this format: [type:]number")
+                raise typer.Exit(1)
+        else:
             print("GPU options should be given in this format: [type:]number")
-            raise typer.Exit(1)
-    else:
-        print("GPU options should be given in this format: [type:]number")
-        raise typer.Exit(1)
+            raise typer.Exit(code=1)
     # Schedule batch job
     try:
         submit_sbatch(command, runtime, partitions, num_gpus, gpu_name)
@@ -111,21 +112,22 @@ def simulate_submit(
     """Simulate submitting an sbatch job."""
     # Parse arguments
     partitions = partition.split(",") if partition is not None else None
-    gpu_options = gpus_per_node.split(":")
     num_gpus = None
     gpu_name = None
-    if len(gpu_options) == 2:
-        gpu_name = gpu_options[0]
-        num_gpus = int(gpu_options[1])
-    elif len(gpu_options) == 1:
-        try:
-            num_gpus = int(gpu_options[0])
-        except ValueError as _:
+    if gpus_per_node:
+        gpu_options = gpus_per_node.split(":")
+        if len(gpu_options) == 2:
+            gpu_name = gpu_options[0]
+            num_gpus = int(gpu_options[1])
+        elif len(gpu_options) == 1:
+            try:
+                num_gpus = int(gpu_options[0])
+            except ValueError as _:
+                print("GPU options should be given in this format: [type:]number")
+                raise typer.Exit(1)
+        else:
             print("GPU options should be given in this format: [type:]number")
-            raise typer.Exit(1)
-    else:
-        print("GPU options should be given in this format: [type:]number")
-        raise typer.Exit(code=1)
+            raise typer.Exit(code=1)
     # Determine submit date for simulation
     submit_date = (
         datetime.fromisoformat(submit_date)
