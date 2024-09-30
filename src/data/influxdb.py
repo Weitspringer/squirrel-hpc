@@ -26,6 +26,22 @@ def get_gci_data(
     return gci_data
 
 
+def delete_data(start: datetime, stop: datetime, options: dict) -> None:
+    """Delete data from InfluxDB."""
+    if not options:
+        return
+    bucket = options.get("bucket")
+    measurement = options.get("measurement")
+    tags = options.get("tags")
+    predicate = f'_measurement="{measurement}"'
+    for key, value in tags.items():
+        predicate += f' AND {key}="{value}"'
+    influx_client = _get_client()
+    influx_client.delete_api().delete(
+        start=start, stop=stop, predicate=predicate, bucket=bucket
+    )
+
+
 def write_gci_forecast(forecast: pd.DataFrame, options: dict | None = None) -> None:
     """Write GCI forecast to InfluxDB.
     Forecast dataframe is required to have 'time' and 'gci' columns.
@@ -34,7 +50,7 @@ def write_gci_forecast(forecast: pd.DataFrame, options: dict | None = None) -> N
         options = INFLUX_OPT["gci"]["forecast"]
     _write_data_from_df(
         data=forecast,
-        options=INFLUX_OPT["gci"]["forecast"],
+        options=options,
         value_column="gci",
         time_column="time",
     )
