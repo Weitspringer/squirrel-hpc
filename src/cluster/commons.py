@@ -39,7 +39,28 @@ def read_sinfo(path_to_json: Path | None = None) -> dict:
 
 def get_nodes(path_to_json: Path | None = None) -> list[dict[str, Any]]:
     """Get all nodes of the cluster."""
-    return read_sinfo(path_to_json=path_to_json).get("nodes")
+    sinfo_nodes = read_sinfo(path_to_json=path_to_json).get("nodes")
+    # Return nodes which are sorted with regards to name and scheduling weight
+    return _sort_nodes(sinfo_nodes)
+
+
+def _sort_nodes(nodes: list[dict[str, Any]]):
+    """Sort nodes with regards to name and scheduling weight."""
+    # Create subsets based on weight
+    weighted_nodes = {}
+    for node in nodes:
+        weight = node["weight"]
+        if weight in weighted_nodes.keys():
+            weighted_nodes.get(weight).append(node)
+        else:
+            weighted_nodes.update({weight: [node]})
+    weighted_nodes = dict(sorted(weighted_nodes.items()))
+    # Sort after name in each weight group and accumulate
+    result = []
+    for _, value in weighted_nodes.items():
+        value = sorted(value, key=lambda node: node["name"])
+        result = result + value
+    return result
 
 
 def get_cpu_tdp(hostname: str) -> int | None:
