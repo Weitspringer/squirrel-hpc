@@ -63,22 +63,22 @@ def _sort_nodes(nodes: list[dict[str, Any]]):
     return result
 
 
-def get_cpu_tdp(hostname: str) -> int | None:
+def get_cpu_tdp(node_name: str) -> int | None:
     """Get thermal design power (TDP) of a node's CPUs.
-    The node is defined by its hostname.
+    The node is defined by its name.
 
     If TDP was not provided, returns None.
     """
-    return AdditionalInfo.get_cpu_tdp(node=hostname)
+    return AdditionalInfo.get_cpu_tdp(node=node_name)
 
 
-def get_gpu_tdp(hostname: str) -> int | None:
+def get_gpu_tdp(node_name: str) -> int | None:
     """Get thermal design power (TDP) of a node's GPUs.
-    The node is defined by its hostname.
+    The node is defined by its name.
 
     If TDP was not provided, returns None.
     """
-    return AdditionalInfo.get_gpu_tdp(node=hostname)
+    return AdditionalInfo.get_gpu_tdp(node=node_name)
 
 
 def get_partitions(path_to_json: Path | None = None) -> dict[str, dict[str, Any]]:

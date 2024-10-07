@@ -98,7 +98,7 @@ class Scheduler:
                     # Analyze generic resources of node
                     if not self._gres_matches(p_node["gres"], num_gpus, gpu_name):
                         continue
-                    nodes.add(p_node["hostname"])
+                    nodes.add(p_node["name"])
         return nodes
 
     def _gres_matches(
@@ -152,7 +152,11 @@ class PlanningStrategy(ABC):
 
 
 class CarbonAgnosticFifo(PlanningStrategy):
-    """Carbon-agnostic first-in-first-out (fifo) scheduling strategy."""
+    """Carbon-agnostic first-in-first-out (fifo) scheduling strategy.
+
+    Approximates Slurm's behavior with default topology plugin.
+    Takes into account scheduling weight and node names.
+    """
 
     def allocate_resources(
         self,
@@ -240,7 +244,7 @@ class SpatialGreedyShifting(PlanningStrategy):
         cpu_tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(hostname=node)
+            cpu_tdp = get_cpu_tdp(node_name=node)
             if cpu_tdp is not None:
                 cpu_tdp_box.update({node: cpu_tdp})
             else:
@@ -302,9 +306,9 @@ class SpatialShifting(PlanningStrategy):
         blackbox = []
         for node in nodes:
             if uses_gpu:
-                tdp = get_gpu_tdp(hostname=node)
+                tdp = get_gpu_tdp(node_name=node)
             else:
-                tdp = get_cpu_tdp(hostname=node)
+                tdp = get_cpu_tdp(node_name=node)
             if tdp is not None:
                 tdp_box.update({node: tdp})
             else:
@@ -409,7 +413,7 @@ class SpatiotemporalShifting(PlanningStrategy):
         cpu_tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(hostname=node)
+            cpu_tdp = get_cpu_tdp(node_name=node)
             if cpu_tdp is not None:
                 cpu_tdp_box.update({node: cpu_tdp})
             else:
