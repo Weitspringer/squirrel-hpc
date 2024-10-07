@@ -6,7 +6,7 @@ from uuid import uuid4
 from src.cluster.commons import sbatch
 from src.config.squirrel_conf import Config
 from src.data.timetable import tt_from_csv, tt_to_csv
-from src.sched.scheduler import Scheduler, TemporalShifting
+from src.sched.scheduler import Scheduler, SpatiotemporalShifting
 
 
 def submit_sbatch(
@@ -14,7 +14,8 @@ def submit_sbatch(
 ):
     """Submit a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
-        strategy=TemporalShifting(), cluster_info=Config.get_local_paths()["sinfo_json"]
+        strategy=SpatiotemporalShifting(),
+        cluster_info=Config.get_local_paths()["sinfo_json"],
     )
     now = datetime.now(tz=UTC)
     timetable = tt_from_csv(start=now)
@@ -46,7 +47,8 @@ def simulate_submit_sbatch(
 ):
     """Simulate submitting a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
-        strategy=TemporalShifting(), cluster_info=Config.get_local_paths()["sinfo_json"]
+        strategy=SpatiotemporalShifting(),
+        cluster_info=Config.get_local_paths()["sinfo_json"],
     )
     timetable = tt_from_csv(start=submit_date)
     start_timeslot, node = scheduler.schedule_sbatch(
