@@ -14,8 +14,12 @@ It is a bridge system between the user and Slurm.
 
 ## Prerequisites
 
+### Simulation
 - Python with **version 3.11** or above.
 - A running **InfluxDB** instance ([self-hosted](https://github.com/influxdata/influxdb) or [cloud](https://www.influxdata.com/get-influxdb/)).
+
+### Production
+- All of the above.
 - You have access to `sbatch` and the `sinfo` Slurm command.
 
 ## Configuration
@@ -40,3 +44,12 @@ alias squirrel="python -m cli"
 
 squirrel submit [...]
 ```
+
+## Contribute
+
+### Testing
+
+```bash
+python -m unittest
+```
+
