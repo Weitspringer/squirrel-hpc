@@ -9,7 +9,7 @@ from tqdm import tqdm
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import TemporalShifting, SpatiotemporalShifting
 
-from src.sim.common.pipeline import main
+from src.sim.common.pipeline import main, plot
 
 # Experiment configuration
 ZONES = ["DE"]
@@ -30,10 +30,10 @@ for i in tqdm(job_range):
         jobs.update(
             {
                 f"job{i}": {
-                    "c1": 50,
-                    "c12": 50,
-                    "c2": 65,
-                    "g1": 60,
+                    "c1": 75,
+                    "c12": 75,
+                    "c2": 135,
+                    "g1": 108,
                 }
             }
         )
@@ -49,7 +49,8 @@ for i in tqdm(job_range):
         strat_2=SpatiotemporalShifting(),
         forecasting=False,
     )
-    stats_df = pd.read_csv(RESULT_DIR / "stats.csv")
+    plot(days=DAYS, result_dir=RESULT_DIR)
+    stats_df = pd.read_csv(RESULT_DIR / "data" / "stats.csv")
     for index, row in stats_df.iterrows():
         df_zon = stats_df.at[index, "zone"]
         max_rel_savings_per_country.get(df_zon).append(row["med_savings_rel"])
