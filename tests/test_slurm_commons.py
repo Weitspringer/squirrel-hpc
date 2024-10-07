@@ -20,27 +20,6 @@ class TestSlurmCommons(unittest.TestCase):
         partitions = mut.get_partitions(path_to_json=path_to_json)
         assert len(partitions.keys()) == 4
 
-    def test_sort_nodes(self):
-        """Test sorting of nodes by weight and name."""
-        nodes = [
-            {"name": "node2", "weight": 10},
-            {"name": "node1", "weight": 10},
-            {"name": "node3", "weight": 5},
-            {"name": "node4", "weight": 15},
-        ]
-
-        expected_result = [
-            {"name": "node3", "weight": 5},
-            {"name": "node1", "weight": 10},
-            {"name": "node2", "weight": 10},
-            {"name": "node4", "weight": 15},
-        ]
-
-        result = mut._sort_nodes(nodes)
-
-        # Check if the result matches the expected sorted order
-        self.assertEqual(result, expected_result)
-
 
 if __name__ == "__main__":
     unittest.main()

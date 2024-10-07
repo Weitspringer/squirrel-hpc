@@ -60,7 +60,7 @@ class Scheduler:
         r_window = None
         uses_gpu = num_gpus is not None
         if hours <= len(timetable.timeslots):
-            nodes = self._get_nodeset(
+            nodes = self._get_nodes(
                 partitions=partitions, num_gpus=num_gpus, gpu_name=gpu_name
             )
             if len(nodes) == 0:
@@ -82,24 +82,40 @@ class Scheduler:
             raise NoWindowAllocatedException("The schedule is full.")
         return r_window[0].start, r_node
 
-    def _get_nodeset(
+    def _get_nodes(
         self,
         partitions: list[str],
         num_gpus: int | None = None,
         gpu_name: str | None = None,
     ) -> list[str]:
         # Get suitable nodes based on partitions and requested GPUs
+        # Sort with regards to their weight and name.
         cluster = get_partitions(path_to_json=self._cluster_info)
-        nodes = set()
+        nodeset = set()
+        weighted_nodes = {}
         for partition, p_nodes in cluster.items():
             # Filter partitions
             if partition in partitions:
                 for p_node in p_nodes:
+                    p_name = p_node["name"]
+                    if p_name in nodeset:
+                        continue
+                    nodeset.add(p_name)
                     # Analyze generic resources of node
                     if not self._gres_matches(p_node["gres"], num_gpus, gpu_name):
                         continue
-                    nodes.add(p_node["name"])
-        return nodes
+                    weight = p_node["weight"]
+                    if weight not in weighted_nodes.keys():
+                        weighted_nodes.update({weight: [p_name]})
+                    else:
+                        weighted_nodes.get(weight).append(p_name)
+        weighted_nodes = dict(sorted(weighted_nodes.items()))
+        # Sort after name in each weight group and accumulate
+        result = []
+        for _, value in weighted_nodes.items():
+            value = sorted(value)
+            result = result + value
+        return result
 
     def _gres_matches(
         self, gres: str, num_gpus: int | None, gpu_name: str | None
