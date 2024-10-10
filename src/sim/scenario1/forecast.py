@@ -47,11 +47,11 @@ ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 START = "2023-01-03T00:00:00+00:00"
 DAYS = 362
 JOBS = {
-    "job1": {"c1": 250},
-    "job2": {"c1": 200},
-    "job3": {"c1": 150},
-    "job4": {"c1": 100},
-    "job5": {"c1": 50},
+    "job1": {"c01": 250},
+    "job2": {"c01": 200},
+    "job3": {"c01": 150},
+    "job4": {"c01": 100},
+    "job5": {"c01": 50},
 }
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
