@@ -10,7 +10,7 @@ from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 from src.sched.timeslot import ConstrainedTimeslot
 
-TT_CSV_HEADER = ["start, end, gci, jobs, reserved_resources"]
+TT_CSV_HEADER = ["start", "end", "gci", "jobs", "reserved_resources"]
 
 
 class Timetable:
@@ -109,10 +109,11 @@ class Timetable:
 
     def read_csv(self, csv_path: Path):
         """Reads state from csv file."""
-        with open(csv_path, "r") as csv_file:
+        with open(csv_path, "r", encoding="utf-8") as csv_file:
             ttreader = csv.reader(csv_file)
-            ttreader.__next__()
-            for row in ttreader:
+            _ = next(ttreader)
+            row = next(ttreader)
+            while row != []:
                 self.append_timeslot(
                     ConstrainedTimeslot(
                         start=datetime.fromisoformat(row[0]),
