@@ -35,10 +35,10 @@
         "gres_drained": "N\/A",
         "gres_used": "gpu:0,mps:0",
         "mcs_label": "",
-        "name": "c1",
+        "name": "c01",
         "next_state_after_reboot": "invalid",
-        "address": "c1",
-        "hostname": "c1",
+        "address": "c01",
+        "hostname": "c01",
         "state": "idle",
         "state_flags": [
         ],
