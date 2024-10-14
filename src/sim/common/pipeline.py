@@ -10,6 +10,7 @@ import pandas as pd
 
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
+from src.forecasting.gci import builtin_forecast_gci
 from src.sched.scheduler import Scheduler, PlanningStrategy
 from src.sched.timetable import Timetable
 
@@ -17,7 +18,7 @@ from src.sched.timetable import Timetable
 def _sim_schedule(
     strategy: PlanningStrategy,
     submit_date: datetime,
-    influx_options: dict,
+    gci_data: pd.DataFrame,
     jobs: dict[str, dict[str, int]],
     cluster_path: Path,
     hours: int = 24,
@@ -32,12 +33,12 @@ def _sim_schedule(
     )
     # Construct new time tables
     # Append ground truth data to new timetables (no forecasting error)
+    gci_window = gci_data[
+        (gci_data["time"] >= submit_date + timedelta(hours=1))
+        & (gci_data["time"] <= submit_date + timedelta(hours=hours))
+    ]
     timetable = Timetable()
-    timetable.append_historic(
-        start=submit_date,
-        end=submit_date + timedelta(hours=hours),
-        options=influx_options,
-    )
+    timetable.append_direct(gci_window)
     for job_id in jobs.keys():
         scheduler.schedule_sbatch(
             timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
@@ -67,7 +68,7 @@ def _sim_schedule(
 def _sim_schedule_forecasted(
     strategy: PlanningStrategy,
     submit_date: datetime,
-    influx_options: dict,
+    gci_data: pd.DataFrame,
     jobs: dict[str, dict[str, int]],
     cluster_path: Path,
     hours: int = 24,
@@ -77,11 +78,10 @@ def _sim_schedule_forecasted(
     Returns scheduling footprint and average job delay.
     """
     # Get ground truth GCI data
-    gci_hist = get_gci_data(
-        start=submit_date,
-        stop=submit_date + timedelta(hours=hours + 1),
-        options=influx_options,
-    )
+    gci_hist = gci_data[
+        (gci_data["time"] >= submit_date)
+        & (gci_data["time"] <= submit_date + timedelta(hours=hours + 1))
+    ]
     # Create scheduler
     scheduler = Scheduler(
         strategy=strategy,
@@ -89,12 +89,8 @@ def _sim_schedule_forecasted(
     )
     # Construct new time tables
     timetable = Timetable()
-    timetable.append_forecast(
-        start=submit_date,
-        forecast_days=1,
-        lookback_days=2,
-        options=influx_options,
-    )
+    forecast = builtin_forecast_gci(gci_hist, days=1, lookback=2)
+    timetable.append_direct(forecast)
     for job_id in jobs.keys():
         scheduler.schedule_sbatch(
             timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
@@ -149,18 +145,24 @@ def _compare(
     delays_1 = []
     footprints_2 = []
     delays_2 = []
+    # Get the GCI data
+    if not forecasted:
+        _sim_method = _sim_schedule
+    else:
+        _sim_method = _sim_schedule_forecasted
+    influx_options = Config.get_influx_config()["gci"]["history"]
+    influx_options.get("tags").update({"zone": zone})
+    gci_data = get_gci_data(
+        submit_dates[0],
+        submit_dates[-1] + timedelta(hours=lookahead_hours + 1),
+        options=influx_options,
+    )
+    # Simulate for submit dates
     for submit_date in submit_dates:
-        if not forecasted:
-            influx_options = Config.get_influx_config()["gci"]["history"]
-            _sim_method = _sim_schedule
-        else:
-            influx_options = Config.get_influx_config()["gci"]["forecast"]
-            _sim_method = _sim_schedule_forecasted
-        influx_options.get("tags").update({"zone": zone})
         footprint_1, delay_1 = _sim_method(
             strategy=strat_1,
             submit_date=submit_date,
-            influx_options=influx_options,
+            gci_data=gci_data,
             jobs=jobs_1,
             cluster_path=cluster_path,
             hours=lookahead_hours,
@@ -168,7 +170,7 @@ def _compare(
         footprint_2, delay_2 = _sim_method(
             strategy=strat_2,
             submit_date=submit_date,
-            influx_options=influx_options,
+            gci_data=gci_data,
             jobs=jobs_2,
             cluster_path=cluster_path,
             hours=lookahead_hours,
