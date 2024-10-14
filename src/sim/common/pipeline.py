@@ -10,18 +10,16 @@ import pandas as pd
 
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
-from src.forecasting.gci import builtin_forecast_gci
 from src.sched.scheduler import Scheduler, PlanningStrategy
 from src.sched.timetable import Timetable
 
 
 def _sim_schedule(
     strategy: PlanningStrategy,
-    submit_date: datetime,
     gci_data: pd.DataFrame,
+    forecasted_gci: pd.DataFrame,
     jobs: dict[str, dict[str, int]],
     cluster_path: Path,
-    hours: int = 24,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
     Returns scheduling footprint and average job delay.
@@ -32,13 +30,8 @@ def _sim_schedule(
         cluster_info=cluster_path,
     )
     # Construct new time tables
-    # Append ground truth data to new timetables (no forecasting error)
-    gci_window = gci_data[
-        (gci_data["time"] >= submit_date + timedelta(hours=1))
-        & (gci_data["time"] <= submit_date + timedelta(hours=hours))
-    ]
     timetable = Timetable()
-    timetable.append_direct(gci_window)
+    timetable.append_direct(gci_data)
     for job_id in jobs.keys():
         scheduler.schedule_sbatch(
             timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
@@ -67,21 +60,15 @@ def _sim_schedule(
 
 def _sim_schedule_forecasted(
     strategy: PlanningStrategy,
-    submit_date: datetime,
     gci_data: pd.DataFrame,
+    forecasted_gci: pd.DataFrame,
     jobs: dict[str, dict[str, int]],
     cluster_path: Path,
-    hours: int = 24,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
     The GCI is not set from history, but forecasted.
     Returns scheduling footprint and average job delay.
     """
-    # Get ground truth GCI data
-    gci_hist = gci_data[
-        (gci_data["time"] >= submit_date)
-        & (gci_data["time"] <= submit_date + timedelta(hours=hours + 1))
-    ]
     # Create scheduler
     scheduler = Scheduler(
         strategy=strategy,
@@ -89,8 +76,7 @@ def _sim_schedule_forecasted(
     )
     # Construct new time tables
     timetable = Timetable()
-    forecast = builtin_forecast_gci(gci_hist, days=1, lookback=2)
-    timetable.append_direct(forecast)
+    timetable.append_direct(forecasted_gci)
     for job_id in jobs.keys():
         scheduler.schedule_sbatch(
             timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
@@ -103,8 +89,8 @@ def _sim_schedule_forecasted(
             if reservation:
                 watts = consumptions.get(reservation.get("node"))
                 delays.append(index)
-                real_gci = gci_hist.loc[
-                    gci_hist["time"] == pd.Timestamp(slot.start)
+                real_gci = gci_data.loc[
+                    gci_data["time"] == pd.Timestamp(slot.start)
                 ].iloc[0]["gci"]
                 footprint += real_gci * (
                     (watts / 1000)
@@ -148,8 +134,16 @@ def _compare(
     # Get the GCI data
     if not forecasted:
         _sim_method = _sim_schedule
+        forecasted_gci = None
     else:
         _sim_method = _sim_schedule_forecasted
+        influx_options = Config.get_influx_config()["gci"]["forecast"]
+        influx_options.get("tags").update({"zone": zone})
+        forecasted_gci = get_gci_data(
+            submit_dates[0],
+            submit_dates[-1] + timedelta(hours=lookahead_hours + 1),
+            options=influx_options,
+        )
     influx_options = Config.get_influx_config()["gci"]["history"]
     influx_options.get("tags").update({"zone": zone})
     gci_data = get_gci_data(
@@ -159,21 +153,27 @@ def _compare(
     )
     # Simulate for submit dates
     for submit_date in submit_dates:
+        part_gci = gci_data[
+            (gci_data["time"] >= submit_date + timedelta(hours=1))
+            & (gci_data["time"] <= submit_date + timedelta(hours=lookahead_hours))
+        ]
+        part_forecasted = forecasted_gci[
+            (gci_data["time"] >= submit_date + timedelta(hours=1))
+            & (gci_data["time"] <= submit_date + timedelta(hours=lookahead_hours))
+        ]
         footprint_1, delay_1 = _sim_method(
             strategy=strat_1,
-            submit_date=submit_date,
-            gci_data=gci_data,
+            gci_data=part_gci,
+            forecasted_gci=part_forecasted,
             jobs=jobs_1,
             cluster_path=cluster_path,
-            hours=lookahead_hours,
         )
         footprint_2, delay_2 = _sim_method(
             strategy=strat_2,
-            submit_date=submit_date,
-            gci_data=gci_data,
+            gci_data=part_gci,
+            forecasted_gci=part_forecasted,
             jobs=jobs_2,
             cluster_path=cluster_path,
-            hours=lookahead_hours,
         )
         footprints_1.append(round(footprint_1, 2))
         delays_1.append(delay_1)
