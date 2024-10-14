@@ -26,6 +26,10 @@ It is a bridge system between the user and Slurm.
 
 See the [wiki page](https://github.com/Weitspringer/squirrel-hpc/wiki/Configuration) for details on configuring Squirrel.
 
+## Setup
+- Create a virtual environment which has the requirements from `requirements.txt` installed.
+- Populate InfluxDB with data. See the [guide](https://github.com/Weitspringer/squirrel-hpc/wiki/Grid-Carbon-Intensity-(GCI)-Data) for getting started with grid carbon intensity data.
+
 ## Usage
 
 To submit an sbatch job, use 
