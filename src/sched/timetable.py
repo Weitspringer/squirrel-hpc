@@ -78,7 +78,6 @@ class Timetable:
                 jobs={},
                 reserved_resources={},
             )
-            print(row["time"], row["time"] + timedelta(hours=1))
             self.append_timeslot(ts)
 
     def append_historic(
@@ -94,7 +93,6 @@ class Timetable:
                 jobs={},
                 reserved_resources={},
             )
-            print(row["time"], row["time"] + timedelta(hours=1))
             self.append_timeslot(ts)
 
     def append_direct(self, gci_data: pd.DataFrame):
@@ -107,7 +105,6 @@ class Timetable:
                 jobs={},
                 reserved_resources={},
             )
-            print(row["time"], row["time"] + timedelta(hours=1))
             self.append_timeslot(ts)
 
     def truncate_history(self, latest: datetime):
