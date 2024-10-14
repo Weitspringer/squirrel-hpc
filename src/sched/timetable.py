@@ -1,16 +1,15 @@
 """Timetable"""
 
-import csv
 from datetime import datetime, timedelta
 import json
 from pathlib import Path
+
+import pandas as pd
 
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 from src.sched.timeslot import ConstrainedTimeslot
-
-TT_CSV_HEADER = ["start", "end", "gci", "jobs", "reserved_resources"]
 
 
 class Timetable:
@@ -25,7 +24,6 @@ class Timetable:
             self.timeslots = timeslots
         else:
             self.timeslots = []
-        self._csv_header = TT_CSV_HEADER
 
     def append_timeslot(self, timeslot: ConstrainedTimeslot) -> bool:
         """Append a timeslot to the latest timeslot.
@@ -80,6 +78,7 @@ class Timetable:
                 jobs={},
                 reserved_resources={},
             )
+            print(row["time"], row["time"] + timedelta(hours=1))
             self.append_timeslot(ts)
 
     def append_historic(
@@ -95,6 +94,20 @@ class Timetable:
                 jobs={},
                 reserved_resources={},
             )
+            print(row["time"], row["time"] + timedelta(hours=1))
+            self.append_timeslot(ts)
+
+    def append_direct(self, gci_data: pd.DataFrame):
+        """Append timeslots using data from data frame."""
+        for _, row in gci_data.iterrows():
+            ts = ConstrainedTimeslot(
+                start=row["time"],
+                end=row["time"] + timedelta(hours=1),
+                gci=row["gci"],
+                jobs={},
+                reserved_resources={},
+            )
+            print(row["time"], row["time"] + timedelta(hours=1))
             self.append_timeslot(ts)
 
     def truncate_history(self, latest: datetime):
@@ -109,33 +122,29 @@ class Timetable:
 
     def read_csv(self, csv_path: Path):
         """Reads state from csv file."""
-        with open(csv_path, "r", encoding="utf-8") as csv_file:
-            ttreader = csv.reader(csv_file)
-            _ = next(ttreader)
-            row = next(ttreader)
-            while row != []:
-                self.append_timeslot(
-                    ConstrainedTimeslot(
-                        start=datetime.fromisoformat(row[0]),
-                        end=datetime.fromisoformat(row[1]),
-                        gci=float(row[2]),
-                        jobs=json.loads(row[3]),
-                        reserved_resources=json.loads(row[4]),
-                    )
+        input_data = pd.read_csv(csv_path)
+        for _, row in input_data.iterrows():
+            self.append_timeslot(
+                ConstrainedTimeslot(
+                    start=datetime.fromisoformat(row["start"]),
+                    end=datetime.fromisoformat(row["end"]),
+                    gci=float(row["gci"]),
+                    jobs=json.loads(row["jobs"]),
+                    reserved_resources=json.loads(row["reserved_resources"]),
                 )
+            )
 
     def write_csv(self, csv_path: Path):
         """Writes state to csv file."""
-        with open(csv_path, "w") as csv_file:
-            ttwriter = csv.writer(csv_file)
-            ttwriter.writerow(self._csv_header)
-            for timeslot in self.timeslots:
-                ttwriter.writerow(
-                    [
-                        timeslot.start.isoformat(),
-                        timeslot.end.isoformat(),
-                        timeslot.gci,
-                        json.dumps(timeslot.jobs),
-                        json.dumps(timeslot.reserved_resources),
-                    ]
-                )
+        rows = []
+        for timeslot in self.timeslots:
+            rows.append(
+                {
+                    "start": timeslot.start.isoformat(),
+                    "end": timeslot.end.isoformat(),
+                    "gci": timeslot.gci,
+                    "jobs": json.dumps(timeslot.jobs),
+                    "reserved_resources": json.dumps(timeslot.reserved_resources),
+                }
+            )
+        pd.DataFrame(rows).to_csv(csv_path)
