@@ -157,10 +157,13 @@ def _compare(
             (gci_data["time"] >= submit_date + timedelta(hours=1))
             & (gci_data["time"] <= submit_date + timedelta(hours=lookahead_hours))
         ]
-        part_forecasted = forecasted_gci[
-            (gci_data["time"] >= submit_date + timedelta(hours=1))
-            & (gci_data["time"] <= submit_date + timedelta(hours=lookahead_hours))
-        ]
+        if forecasted_gci is not None:
+            part_forecasted = forecasted_gci[
+                (gci_data["time"] >= submit_date + timedelta(hours=1))
+                & (gci_data["time"] <= submit_date + timedelta(hours=lookahead_hours))
+            ]
+        else:
+            part_forecasted = None
         footprint_1, delay_1 = _sim_method(
             strategy=strat_1,
             gci_data=part_gci,
