@@ -13,11 +13,11 @@ from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
-FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
 
 
 def demo(forecast_days: int, lookback_days: int):
     """Live demo of forecast."""
+    FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
     end_point = datetime.now(tz=UTC)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
     gci_history = get_gci_data(start=start_point, stop=end_point)
@@ -34,6 +34,7 @@ def demo(forecast_days: int, lookback_days: int):
 
 
 def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
+    FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
     stop = datetime.fromisoformat("2023-07-08T23:00:00Z")
     start = datetime.fromisoformat("2023-07-01T00:00:00Z")
     gci_hist, forecasts, metrics = _simulate_forecasts(
@@ -100,6 +101,7 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
 
 def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: bool):
     """Evaluate forecasting with different parameters."""
+    FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
     stop = datetime.fromisoformat("2023-12-31T23:00:00Z")
     start = datetime.fromisoformat("2023-01-01T00:00:00Z")
     all_pcc = []
