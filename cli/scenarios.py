@@ -6,7 +6,14 @@ from typing_extensions import Annotated
 
 import typer
 
-from src.sim.scenario1 import ascending, constant, descending, forecast, multinode
+from src.sim.scenario1 import (
+    ascending,
+    constant,
+    descending,
+    forecast,
+    multinode,
+    chronus,
+)
 from src.sim.scenario2 import lb_30, lb_60, lb_90
 
 app = typer.Typer()
@@ -20,6 +27,7 @@ class Scenario1Enum(enum.Enum):
     DESC = "desc"
     FC = "desc+forecast"
     MULTI = "cons+multi"
+    CHRON = "chronus"
 
 
 class Scenario2Enum(enum.Enum):
@@ -46,6 +54,8 @@ def temporal(
         forecast.run()
     elif sc == Scenario1Enum.MULTI.value:
         multinode.run()
+    elif sc == Scenario1Enum.CHRON.value:
+        chronus.run()
 
 
 @app.command()
@@ -71,6 +81,7 @@ def visualize():
         descending,
         forecast,
         multinode,
+        chronus,
         lb_30,
         lb_60,
         lb_90,

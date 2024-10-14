@@ -129,7 +129,8 @@ def _compare(
     start: str,
     days: int,
     lookahead_hours: int,
-    jobs: dict[str, dict[str, int]],
+    jobs_1: dict[str, dict[str, int]],
+    jobs_2: dict[str, dict[str, int]],
     cluster_path: Path,
     strat_1: PlanningStrategy,
     strat_2: PlanningStrategy,
@@ -148,18 +149,19 @@ def _compare(
     delays_1 = []
     footprints_2 = []
     delays_2 = []
-    influx_options = Config.get_influx_config()["gci"]["forecast"]
-    influx_options.get("tags").update({"zone": zone})
     for submit_date in submit_dates:
         if not forecasted:
+            influx_options = Config.get_influx_config()["gci"]["history"]
             _sim_method = _sim_schedule
         else:
+            influx_options = Config.get_influx_config()["gci"]["forecast"]
             _sim_method = _sim_schedule_forecasted
+        influx_options.get("tags").update({"zone": zone})
         footprint_1, delay_1 = _sim_method(
             strategy=strat_1,
             submit_date=submit_date,
             influx_options=influx_options,
-            jobs=jobs,
+            jobs=jobs_1,
             cluster_path=cluster_path,
             hours=lookahead_hours,
         )
@@ -167,7 +169,7 @@ def _compare(
             strategy=strat_2,
             submit_date=submit_date,
             influx_options=influx_options,
-            jobs=jobs,
+            jobs=jobs_2,
             cluster_path=cluster_path,
             hours=lookahead_hours,
         )
@@ -194,7 +196,8 @@ def main(
     start: str,
     days: int,
     lookahead_hours: int,
-    jobs: dict[str, dict[str, int]],
+    jobs_1: dict[str, dict[str, int]],
+    jobs_2: dict[str, dict[str, int]],
     cluster_path: Path,
     result_dir: Path,
     strat_1: PlanningStrategy,
@@ -215,7 +218,8 @@ def main(
                 start,
                 days,
                 lookahead_hours,
-                jobs,
+                jobs_1,
+                jobs_2,
                 cluster_path,
                 strat_1,
                 strat_2,
@@ -327,7 +331,7 @@ def plot(
         color=res_ar_colors,
     )
     plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
-    plt.ylim(0, 1)
+    plt.ylim(-0.2, 1)
     plt.ylabel("Average of Median Relative Savings")
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
