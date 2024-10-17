@@ -57,18 +57,24 @@ class Timetable:
             if not options:
                 options = Config.get_influx_config()["gci"]["history"]
             start_point = start - timedelta(days=lookback_days, hours=1)
-            gci_history = get_gci_data(start=start_point, stop=start, options=options)
+            try:
+                gci_history = get_gci_data(start=start_point, stop=start, options=options)
+            except ValueError:
+                raise ValueError("Built-in forecasting: Not enough historical GCI data.")
             forecast = builtin_forecast_gci(
                 gci_history, days=forecast_days, lookback=lookback_days
             )
         else:
             if not options:
                 options = Config.get_influx_config()["gci"]["forecast"]
-            forecast = get_gci_data(
-                start=start,
-                stop=start + timedelta(days=forecast_days),
-                options=options,
-            )
+            try:
+                forecast = get_gci_data(
+                    start=start,
+                    stop=start + timedelta(days=forecast_days),
+                    options=options,
+                )
+            except ValueError:
+                raise ValueError("No GCI forecast data in InfluxDB.")
         # Create new time slots
         for _, row in forecast.iterrows():
             ts = ConstrainedTimeslot(
