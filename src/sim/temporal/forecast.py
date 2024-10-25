@@ -55,9 +55,9 @@ ZONES = [
     {"name": "DE", "utc_shift_hours": +1},
 ]
 # When does the scheduling take place first?
-START = "2022-12-31T23:00:00+00:00"
+START = "2022-01-02T23:00:00+00:00"
 # Schedules are calculated hourly. For how many days?
-DAYS = 364
+DAYS = 361
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
