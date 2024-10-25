@@ -93,7 +93,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
 TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
 # Define where results will be stored.
 RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "descending"
+    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "forecast"
 )
 
 
