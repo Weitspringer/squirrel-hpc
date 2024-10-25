@@ -155,9 +155,13 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
         all_calc.append(calcs)
 
     median_pcc = np.array(all_pcc)
+    pcc_thresh = median_pcc.min() + (median_pcc.max() - median_pcc.min()) / 2
     median_rmse = np.array(all_rmse)
+    rmse_thresh = median_rmse.min() + (median_rmse.max() - median_rmse.min()) / 2
     median_mape = np.array(all_mape)
+    mape_thresh = median_mape.min() + (median_mape.max() - median_mape.min()) / 2
     median_time = np.array(all_calc)
+    time_thresh = median_time.min() + (median_time.max() - median_time.min()) / 2
     _, ax = plt.subplots()
 
     # PCC
@@ -174,7 +178,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
                 round(median_pcc[i, j], 3),
                 ha="center",
                 va="center",
-                color="white" if median_pcc[i, j] > 0.7 else "black",
+                color="white" if median_pcc[i, j] > pcc_thresh else "black",
             )
     ax.title.set_text("Median PCC")
     plt.tight_layout()
@@ -195,7 +199,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
                 round(median_rmse[i, j]),
                 ha="center",
                 va="center",
-                color="white" if median_rmse[i, j] < 85 else "black",
+                color="white" if median_rmse[i, j] < rmse_thresh else "black",
             )
     ax.title.set_text("Median RMSE")
     plt.tight_layout()
@@ -213,10 +217,10 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
             ax.text(
                 j,
                 i,
-                round(median_mape[i, j]),
+                round(median_mape[i, j], 3),
                 ha="center",
                 va="center",
-                color="white" if median_mape[i, j] < 50 else "black",
+                color="white" if median_mape[i, j] < mape_thresh else "black",
             )
     ax.title.set_text("Median MAPE")
     plt.tight_layout()
@@ -237,7 +241,7 @@ def parameter_eval(forecast_days: list[int], lookback_range: list[int], hourly: 
                 round(median_time[i, j], 4),
                 ha="center",
                 va="center",
-                color="white" if median_time[i, j] < 0.04 else "black",
+                color="white" if median_time[i, j] < time_thresh else "black",
             )
     ax.title.set_text("Median computation time per forecast [s]")
     plt.tight_layout()
