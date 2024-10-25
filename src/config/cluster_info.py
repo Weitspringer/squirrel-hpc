@@ -5,7 +5,7 @@ from pathlib import Path
 from src.config.ini_conf import IniConfig
 
 
-class ClusterInfo(IniConfig):
+class NodesMeta(IniConfig):
     """Reads additional information about cluster nodes."""
 
     def get_cpu_tdp(self, node: str) -> int | None:
@@ -34,6 +34,6 @@ class ClusterInfo(IniConfig):
         return self.conf.has_section(f"nodes.{node}")
 
 
-Config = ClusterInfo(
+Meta = NodesMeta(
     path=Path(__file__).resolve().parent / ".." / ".." / "config" / "cluster_info.cfg"
 )

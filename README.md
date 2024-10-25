@@ -20,7 +20,7 @@ It is a bridge system between the user and Slurm.
 
 ### Production
 - All of the above.
-- You have access to `sbatch` and the `sinfo` Slurm command.
+- You have access to `sbatch` and the `scontrol` Slurm command.
 
 ## Configuration
 

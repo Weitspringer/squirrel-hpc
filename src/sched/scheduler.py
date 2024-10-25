@@ -1,3 +1,5 @@
+"""Scheduling logic implementation for multiple schedulers."""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -5,12 +7,13 @@ from functools import reduce
 from pathlib import Path
 
 from src.cluster.commons import get_partitions, get_cpu_tdp, get_gpu_tdp
+from src.config.cluster_info import Meta, NodesMeta
 from src.errors.scheduling import (
     NoWindowAllocatedException,
     NoSuitableNodeException,
     JobTooLongException,
 )
-from .timetable import Timetable, ConstrainedTimeslot
+from src.sched.timetable import Timetable, ConstrainedTimeslot
 
 
 class Scheduler:
@@ -19,7 +22,11 @@ class Scheduler:
     Strategy pattern.
     """
 
-    def __init__(self, strategy: PlanningStrategy, cluster_info: Path = None) -> None:
+    def __init__(
+        self,
+        strategy: PlanningStrategy,
+        cluster_info: Path = None,
+    ) -> None:
         """
         The scheduler accepts a strategy through the constructor, but
         also provides a setter to change it at runtime.
@@ -76,7 +83,8 @@ class Scheduler:
             )
         else:
             raise JobTooLongException(
-                f"You requested {hours} hours. The maximum amount is {len(timetable.timeslots)} hours."
+                f"You requested {hours} hours. "
+                "The maximum amount is {len(timetable.timeslots)} hours."
             )
         if not r_window:
             raise NoWindowAllocatedException("The schedule is full.")
@@ -105,7 +113,7 @@ class Scheduler:
                     if not self._gres_matches(p_node["gres"], num_gpus, gpu_name):
                         continue
                     weight = p_node["weight"]
-                    if weight not in weighted_nodes.keys():
+                    if weight not in weighted_nodes:
                         weighted_nodes.update({weight: [p_name]})
                     else:
                         weighted_nodes.get(weight).append(p_name)
@@ -152,6 +160,15 @@ class PlanningStrategy(ABC):
 
     # NOTE: Jobs are assumed to be non-interruptible.
 
+    def __init__(self, meta_path: Path = None):
+        if meta_path is None:
+            meta_info = Meta
+        elif meta_path.exists():
+            meta_info = NodesMeta(path=meta_path)
+        else:
+            raise ValueError("File does not exist:", meta_path.absolute())
+        self._node_meta = meta_info
+
     @abstractmethod
     def allocate_resources(
         self,
@@ -164,7 +181,6 @@ class PlanningStrategy(ABC):
         """Exclusively allocate nodes for consecutive window in the timetable.
         The length of the window is determined by the specified hours.
         """
-        pass
 
 
 class CarbonAgnosticFifo(PlanningStrategy):
@@ -260,7 +276,7 @@ class SpatialGreedyShifting(PlanningStrategy):
         cpu_tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(node_name=node)
+            cpu_tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
             if cpu_tdp is not None:
                 cpu_tdp_box.update({node: cpu_tdp})
             else:
@@ -322,9 +338,9 @@ class SpatialShifting(PlanningStrategy):
         blackbox = []
         for node in nodes:
             if uses_gpu:
-                tdp = get_gpu_tdp(node_name=node)
+                tdp = get_gpu_tdp(node_name=node, meta_info=self._node_meta)
             else:
-                tdp = get_cpu_tdp(node_name=node)
+                tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
             if tdp is not None:
                 tdp_box.update({node: tdp})
             else:
@@ -353,7 +369,7 @@ class SpatialShifting(PlanningStrategy):
                     # Ensure marker is within bounds.
                     hour_marker = len(timeslots) - hours
                     # Merge the current pool with any existing pool at the last marker.
-                    if hour_marker in load_balance_pools.keys():
+                    if hour_marker in load_balance_pools:
                         prev_pool = load_balance_pools.get(len(timeslots) - hours)
                         prev_pool += curr_pool
                     else:
@@ -413,6 +429,8 @@ class SpatialShifting(PlanningStrategy):
 
 
 class SpatiotemporalShifting(PlanningStrategy):
+    """Spatiotemporal workload shifting."""
+
     def allocate_resources(
         self,
         job_id: str,
@@ -429,7 +447,7 @@ class SpatiotemporalShifting(PlanningStrategy):
         cpu_tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(node_name=node)
+            cpu_tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
             if cpu_tdp is not None:
                 cpu_tdp_box.update({node: cpu_tdp})
             else:

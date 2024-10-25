@@ -59,22 +59,22 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS_1 = [
     JobSubmission(
-        job_id="job1",
-        partitions=["admin"],
+        job_id="hpcg",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [59.56]},
+        power_draws={"cx01": [59.56]},
     )
 ]
 JOBS_2 = [
     JobSubmission(
-        job_id="job1",
-        partitions=["admin"],
+        job_id="hpcg",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [66.32]},
+        power_draws={"cx01": [66.32]},
     )
 ]
 # What is the lookahead?
@@ -84,9 +84,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
 # TDP configuration.
 TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
 # Define where results will be stored.
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "chronus"
-)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "temporal" / "chronus"
 
 
 ### Experiment execution ###
@@ -109,4 +107,4 @@ def run():
 
 def visualize():
     """Plot the results."""
-    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)
+    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES, rel_ylim=(-12, 50))

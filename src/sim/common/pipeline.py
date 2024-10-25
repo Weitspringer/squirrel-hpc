@@ -82,7 +82,6 @@ def _sim_schedule(
                         / 60
                     )
                 )
-    del timetable
     for job in jobs:
         job.power_draw_rc = 0
     return footprint, np.average(delays)
@@ -92,7 +91,7 @@ def _sim_schedule_forecasted(
     strategy: PlanningStrategy,
     gci_data: pd.DataFrame,
     forecasted_gci: pd.DataFrame,
-    jobs: dict[str, dict[str, int]],
+    jobs: list[JobSubmission],
     cluster_path: Path,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
@@ -107,17 +106,23 @@ def _sim_schedule_forecasted(
     # Construct new time tables
     timetable = Timetable()
     timetable.append_direct(forecasted_gci)
-    for job_id in jobs.keys():
+    for job in jobs:
         scheduler.schedule_sbatch(
-            timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
+            timetable=timetable,
+            job_id=job.id,
+            hours=job.reserved_hours,
+            partitions=job.partitions,
+            num_gpus=job.num_gpus,
+            gpu_name=job.gpu_name,
         )
     footprint = 0
     delays = []
     for index, slot in enumerate(timetable.timeslots):
-        for key, consumptions in jobs.items():
-            reservation = slot.get_reservation(key)
+        for job in jobs:
+            reservation = slot.get_reservation(job.id)
             if reservation:
-                watts = consumptions.get(reservation.get("node"))
+                watts = job.power_draws.get(reservation.get("node"))[job.power_draw_rc]
+                job.power_draw_rc += 1
                 delays.append(index)
                 real_gci = gci_data.loc[
                     gci_data["time"] == pd.Timestamp(slot.start)
@@ -133,6 +138,8 @@ def _sim_schedule_forecasted(
                         / 60
                     )
                 )
+    for job in jobs:
+        job.power_draw_rc = 0
     return footprint, np.average(delays)
 
 
@@ -280,7 +287,12 @@ def main(
     result_df.to_csv(data_dir / "results.csv", index=False)
 
 
-def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
+def plot(
+    days: int,
+    result_dir: Path,
+    zones_dict: list[dict],
+    rel_ylim: tuple[int, int] = (0, 50),
+) -> None:
     """Visualize scenario results."""
 
     ### Load result data
@@ -392,7 +404,7 @@ def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
     res_avg_rel_sorted = dict(
         sorted(res_avg_rel.items(), key=lambda item: item[1][0], reverse=True)
     )
-    res_ar_values = list(map(lambda x: x[0], res_avg_rel_sorted.values()))
+    res_ar_values = list(map(lambda x: x[0] * 100, res_avg_rel_sorted.values()))
     res_ar_colors = list(map(lambda x: x[1], res_avg_rel_sorted.values()))
     plt.bar(
         range(len(res_ar_values)),
@@ -401,7 +413,8 @@ def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
         color=res_ar_colors,
     )
     plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
-    plt.ylim(-0.2, 1)
+    plt.ylim(rel_ylim)
+    plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
     plt.ylabel("Average of Median Relative g$\mathregular{CO_2}$-eq. Savings")
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
@@ -439,7 +452,6 @@ def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
         )
     plt.ylabel("Median g$\mathregular{CO_2}$-eq. Saved")
     plt.xlabel("Hour of Day (localized)")
-    # plt.ylim(-100, 1000)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     # plt.yscale("symlog", base=10)
     plt.grid(axis="y", linewidth=0.5)
@@ -449,6 +461,7 @@ def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
 
     ### RELATIVE SAVINGS
     for zone, res_rel in res_relative.items():
+        res_rel = list(map(lambda x: x * 100, res_rel))
         plt.plot(
             res_hours.get(zone),
             res_rel,
@@ -458,6 +471,8 @@ def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
             alpha=0.7,
         )
     plt.ylabel("Median Fraction of g$\mathregular{CO_2}$-eq. Saved")
+    plt.ylim(rel_ylim)
+    plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
     plt.xlabel("Hour of Day (localized)")
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=0.5)

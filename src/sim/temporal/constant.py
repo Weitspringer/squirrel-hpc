@@ -60,28 +60,28 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        job_id="job1",
-        partitions=["admin"],
+        job_id="tpcxai-sf1_[1]",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [66.32]},
+        power_draws={"cx01": [66.32]},
     ),
     JobSubmission(
-        job_id="job2",
-        partitions=["admin"],
+        job_id="tpcxai-sf1_[2]",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [66.32]},
+        power_draws={"cx01": [66.32]},
     ),
     JobSubmission(
-        job_id="job3",
-        partitions=["admin"],
+        job_id="tpcxai-sf1_[3]",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [66.32]},
+        power_draws={"cx01": [66.32]},
     ),
 ]
 # What is the lookahead?
@@ -92,7 +92,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
 TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
 # Define where results will be stored.
 RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "constant"
+    Config.get_local_paths()["viz_path"] / "scenarios" / "temporal" / "constant"
 )
 
 

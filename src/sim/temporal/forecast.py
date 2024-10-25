@@ -55,34 +55,34 @@ ZONES = [
     {"name": "DE", "utc_shift_hours": +1},
 ]
 # When does the scheduling take place first?
-START = "2022-01-02T23:00:00+00:00"
+START = "2023-01-04T23:00:00+00:00"
 # Schedules are calculated hourly. For how many days?
-DAYS = 361
+DAYS = 360
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        job_id="job1",
-        partitions=["admin"],
+        job_id="tpcxai-sf3",
+        partitions=["magic"],
         reserved_hours=2,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [113.15, 7.87]},
+        power_draws={"cx01": [113.15, 7.87]},
     ),
     JobSubmission(
-        job_id="job2",
-        partitions=["admin"],
+        job_id="tpcxai-sf10-no8",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [100.31]},
+        power_draws={"cx01": [100.31]},
     ),
     JobSubmission(
-        job_id="job3",
-        partitions=["admin"],
+        job_id="tpcxai-sf1",
+        partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
-        power_draws={"c01": [66.32]},
+        power_draws={"cx01": [66.32]},
     ),
 ]
 # What is the lookahead?
@@ -93,7 +93,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
 TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
 # Define where results will be stored.
 RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "forecast"
+    Config.get_local_paths()["viz_path"] / "scenarios" / "temporal" / "forecast"
 )
 
 

@@ -13,7 +13,7 @@ from src.sim.temporal import (
     forecast,
     chronus,
 )
-from src.sim.spatial import lb_30, lb_60, lb_90
+from src.sim.spatial import single
 
 app = typer.Typer()
 
@@ -31,9 +31,7 @@ class Scenario1Enum(enum.Enum):
 class Scenario2Enum(enum.Enum):
     """Options for scenario 2."""
 
-    LB30 = "lb-30"
-    LB60 = "lb-60"
-    LB90 = "lb-90"
+    SING = "single"
 
 
 @app.command()
@@ -60,12 +58,8 @@ def spatial(
 ):
     """Run scenario which compares spatial shifting with carbon-agnostic FIFO."""
     sc = scenario.value
-    if sc == Scenario2Enum.LB30.value:
-        lb_30.run()
-    elif sc == Scenario2Enum.LB60.value:
-        lb_60.run()
-    elif sc == Scenario2Enum.LB90.value:
-        lb_90.run()
+    if sc == Scenario2Enum.SING.value:
+        single.run()
 
 
 @app.command()
@@ -77,9 +71,7 @@ def visualize():
         descending,
         forecast,
         chronus,
-        lb_30,
-        lb_60,
-        lb_90,
+        single,
     ]
     for sc in scenarios:
         if Path(sc.RESULT_DIR / "data" / "results.csv").exists():
