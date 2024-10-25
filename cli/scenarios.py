@@ -6,14 +6,14 @@ from typing_extensions import Annotated
 
 import typer
 
-from src.sim.scenario1 import (
+from src.sim.temporal import (
     ascending,
     constant,
     descending,
     forecast,
     chronus,
 )
-from src.sim.scenario2 import lb_30, lb_60, lb_90
+from src.sim.spatial import lb_30, lb_60, lb_90
 
 app = typer.Typer()
 
