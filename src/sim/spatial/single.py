@@ -31,9 +31,9 @@ JOBS = [
         num_gpus=None,
         gpu_name=None,
         power_draws={
-            "cx16": [128.94, 0],
-            "cx17": [191.51, 70.87],
-            "gx03": [119.78, 1.34],
+            "b": [128.94, 0],
+            "a": [191.51, 70.87],
+            "c": [119.78, 1.34],
         },
     ),
 ]
@@ -42,10 +42,10 @@ LOOKAHEAD_HOURS = 24
 # Cluster configuration.
 CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
 # TDP configuration.
-TDP_PATH = Path("src") / "sim" / "data" / "3-node-tdp.cfg"
+META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
 # Define where results will be stored.
 RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "temporal" / "single-job"
+    Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "single-job"
 )
 
 
@@ -62,7 +62,7 @@ def run():
         cluster_path=CLUSTER_PATH,
         result_dir=RESULT_DIR,
         strat_1=CarbonAgnosticFifo(),
-        strat_2=SpatialShifting(),
+        strat_2=SpatialShifting(meta_path=META_PATH),
         forecasting=False,
     )
 
