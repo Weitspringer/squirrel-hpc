@@ -14,11 +14,32 @@ from src.sched.scheduler import Scheduler, PlanningStrategy
 from src.sched.timetable import Timetable
 
 
+class JobSubmission:
+    """Job submission for simulation"""
+
+    def __init__(
+        self,
+        id: str,
+        partitions: list[str],
+        reserved_hours: int,
+        num_gpus: int,
+        gpu_name: str,
+        power_draws: dict[str, list[int]],
+    ):
+        self.id = id
+        self.partitions = partitions
+        self.reserved_hours = reserved_hours
+        self.num_gpus = num_gpus
+        self.gpu_name = gpu_name
+        self.power_draws = power_draws
+        self.power_draw_rc = 0  # Read counter for power draws
+
+
 def _sim_schedule(
     strategy: PlanningStrategy,
     gci_data: pd.DataFrame,
     forecasted_gci: pd.DataFrame,
-    jobs: dict[str, dict[str, int]],
+    jobs: list[JobSubmission],
     cluster_path: Path,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
@@ -32,17 +53,24 @@ def _sim_schedule(
     # Construct new time tables
     timetable = Timetable()
     timetable.append_direct(gci_data)
-    for job_id in jobs.keys():
+    for job in jobs:
         scheduler.schedule_sbatch(
-            timetable=timetable, job_id=job_id, hours=1, partitions=["admin"]
+            timetable=timetable,
+            job_id=job.id,
+            hours=job.reserved_hours,
+            partitions=job.partitions,
+            num_gpus=job.num_gpus,
+            gpu_name=job.gpu_name,
         )
     footprint = 0
     delays = []
     for index, slot in enumerate(timetable.timeslots):
-        for key, consumptions in jobs.items():
-            reservation = slot.get_reservation(key)
+        for job in jobs:
+            reservation = slot.get_reservation(job.id)
             if reservation:
-                watts = consumptions.get(reservation.get("node"))
+                watts = job.power_draws[job.power_draw_rc].get(reservation.get("node"))
+                print(watts)
+                job.power_draw_rc += 1
                 delays.append(index)
                 footprint += slot.gci * (
                     (watts / 1000)
@@ -337,7 +365,7 @@ def plot(
     )
     plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
     plt.ylim(-0.2, 1)
-    plt.ylabel("Average of Median Relative Savings")
+    plt.ylabel("Average of Median Relative g$\mathregular{CO_2}$-eq. Savings")
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "avg-savings-relative.pdf")
@@ -380,7 +408,7 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Median Emissions Saved [gCO2eq]")
+    plt.ylabel("Median g$\mathregular{CO_2}$-eq. Saved")
     plt.xlabel("Hour of Day")
     # plt.ylim(-100, 1000)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
@@ -400,7 +428,7 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Median Fraction of Emissions Saved")
+    plt.ylabel("Median Fraction of g$\mathregular{CO_2}$-eq. Saved")
     plt.xlabel("Hour of Day")
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=0.5)

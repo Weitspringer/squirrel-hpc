@@ -8,11 +8,11 @@ This experiment investigates job scheduling on a single-node cluster ("c1") to c
 **Experiment Setup:**
 - 5 jobs are submitted sequentially, each requiring 1 hour to complete.
 - The jobs the same power demand (wattage) on node "c1":
-  - Job 1: 150W
-  - Job 2: 150W
-  - Job 3: 150W
-  - Job 4: 150W
-  - Job 5: 150W
+  - Job 1: 130.56W
+  - Job 2: 130.56W
+  - Job 3: 130.56W
+  - Job 4: 130.56W
+  - Job 5: 130.56W
 - The aim is to evaluate the environmental impact of the two scheduling strategies in terms of grid carbon emissions.
 
 **Global Grid Zones Analyzed:**
@@ -46,11 +46,11 @@ ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 START = "2023-01-01T00:00:00+00:00"
 DAYS = 364
 JOBS = {
-    "job1": {"c01": 150},
-    "job2": {"c01": 150},
-    "job3": {"c01": 150},
-    "job4": {"c01": 150},
-    "job5": {"c01": 150},
+    "job1": {"c01": 130.56},
+    "job2": {"c01": 130.56},
+    "job3": {"c01": 130.56},
+    "job4": {"c01": 130.56},
+    "job5": {"c01": 130.56},
 }
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"

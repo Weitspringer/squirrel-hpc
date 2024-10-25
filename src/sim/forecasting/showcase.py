@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, UTC
 import time
 
+import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -24,11 +25,14 @@ def demo(forecast_days: int, lookback_days: int):
     forecast = builtin_forecast_gci(
         gci_history, days=forecast_days, lookback=lookback_days
     )
-    plt.plot(forecast["time"], forecast["gci"])
+    plt.plot(forecast["time"], forecast["gci"], linewidth=2)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m-%dT%H:%m"))
+    plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=2))
     plt.xlabel("Time [UTC]")
     plt.xticks(rotation=45)
-    plt.ylabel("gCO2-eq/kWh")
-    plt.title("GCI Forecast")
+    plt.ylabel("g$\mathregular{CO_2}$-eq./kWh")
+    plt.title("Grid Carbon Intensity Forecast")
+    plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(FC_VIZ_DIRECTORY / "demo.pdf")
 
@@ -46,6 +50,8 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
 
     # Plotting
     _, ax1 = plt.subplots(figsize=(10, 6))
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+    plt.gca().xaxis.set_major_locator(mdates.DayLocator(interval=1))
 
     # Plot historic data
     ax1.plot(
@@ -68,9 +74,9 @@ def visualize_simulation(forecast_days: int, lookback_days: int, hourly: bool):
     # Set labels and title for primary axis
     ax1.set_xlabel("Date")
     ax1.tick_params(axis="x", labelrotation=45)
-    ax1.set_ylabel("GCI [gCO2-eq. / kWh]")
+    ax1.set_ylabel("g$\mathregular{CO_2}$-eq./kWh")
     ax1.set_title(
-        f"{forecast_days}-day GCI Forecasting with {lookback_days} days lookback"
+        f"{forecast_days}-day GCI forecasting with {lookback_days} days lookback"
     )
     ax1.legend(loc="upper left")
 

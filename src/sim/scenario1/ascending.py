@@ -39,19 +39,38 @@ from pathlib import Path
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
-from src.sim.common.pipeline import main, plot
+from src.sim.common.pipeline import main, plot, JobSubmission
 
 # Experiment configuration
 ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-START = "2023-01-01T00:00:00+00:00"
-DAYS = 364
-JOBS = {
-    "job1": {"c01": 50},
-    "job2": {"c01": 100},
-    "job3": {"c01": 150},
-    "job4": {"c01": 200},
-    "job5": {"c01": 250},
-}
+START = "2023-08-01T00:00:00+00:00"
+DAYS = 1
+JOBS = [
+    JobSubmission(
+        id="job1",
+        partitions=["admin"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"c01": [66.32]},
+    ),
+    JobSubmission(
+        id="job2",
+        partitions=["admin"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"c01": [100.31]},
+    ),
+    JobSubmission(
+        id="job3",
+        partitions=["admin"],
+        reserved_hours=2,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"c01": [113.15, 7.87]},
+    ),
+]
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
 RESULT_DIR = (
