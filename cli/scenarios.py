@@ -11,7 +11,6 @@ from src.sim.scenario1 import (
     constant,
     descending,
     forecast,
-    multinode,
     chronus,
 )
 from src.sim.scenario2 import lb_30, lb_60, lb_90
@@ -26,7 +25,6 @@ class Scenario1Enum(enum.Enum):
     CONS = "cons"
     DESC = "desc"
     FC = "desc+forecast"
-    MULTI = "cons+multi"
     CHRON = "chronus"
 
 
@@ -52,8 +50,6 @@ def temporal(
         descending.run()
     elif sc == Scenario1Enum.FC.value:
         forecast.run()
-    elif sc == Scenario1Enum.MULTI.value:
-        multinode.run()
     elif sc == Scenario1Enum.CHRON.value:
         chronus.run()
 
@@ -80,7 +76,6 @@ def visualize():
         constant,
         descending,
         forecast,
-        multinode,
         chronus,
         lb_30,
         lb_60,

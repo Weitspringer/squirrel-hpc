@@ -19,14 +19,14 @@ class JobSubmission:
 
     def __init__(
         self,
-        id: str,
+        job_id: str,
         partitions: list[str],
         reserved_hours: int,
         num_gpus: int,
         gpu_name: str,
         power_draws: dict[str, list[int]],
     ):
-        self.id = id
+        self.id = job_id
         self.partitions = partitions
         self.reserved_hours = reserved_hours
         self.num_gpus = num_gpus
@@ -68,8 +68,7 @@ def _sim_schedule(
         for job in jobs:
             reservation = slot.get_reservation(job.id)
             if reservation:
-                watts = job.power_draws[job.power_draw_rc].get(reservation.get("node"))
-                print(watts)
+                watts = job.power_draws.get(reservation.get("node"))[job.power_draw_rc]
                 job.power_draw_rc += 1
                 delays.append(index)
                 footprint += slot.gci * (
@@ -83,6 +82,9 @@ def _sim_schedule(
                         / 60
                     )
                 )
+    del timetable
+    for job in jobs:
+        job.power_draw_rc = 0
     return footprint, np.average(delays)
 
 
@@ -225,7 +227,7 @@ def _compare(
 
 
 def main(
-    zones: list[str],
+    zones: list[dict],
     start: str,
     days: int,
     lookahead_hours: int,
@@ -247,7 +249,7 @@ def main(
         p = Process(
             target=_compare,
             args=(
-                z,
+                z.get("name"),
                 start,
                 days,
                 lookahead_hours,
@@ -278,17 +280,13 @@ def main(
     result_df.to_csv(data_dir / "results.csv", index=False)
 
 
-def plot(
-    days: int,
-    result_dir: Path,
-) -> None:
+def plot(days: int, result_dir: Path, zones_dict: list[dict]) -> None:
     """Visualize scenario results."""
 
     ### Load result data
     data_dir = result_dir / "data"
     result_df = pd.read_csv(data_dir / "results.csv")
     zones = result_df["zone"].unique()
-    hours = range(24)
 
     ### Dynamically set unique colors for zones
     if len(zones) <= 8:
@@ -309,26 +307,41 @@ def plot(
     res_relative = {}
     res_absolute = {}
     res_avg_rel = {}
+    res_delay = {}
+    res_hours = {}
+    utc_shifts = {z.get("name"): z.get("utc_shift_hours") for z in zones_dict}
     for zone in zones:
+        # Calculate emissions
         footprints_baseline = result_df[result_df["zone"] == zone][
             "footprint_baseline"
         ].to_list()
         footprints_benchmark = result_df[result_df["zone"] == zone][
             "footprint_benchmark"
         ].to_list()
+        # Relative and absolute savings
         relative_savings = np.subtract(
             1, np.divide(footprints_benchmark, footprints_baseline)
         )
         absolute_savings = np.subtract(footprints_baseline, footprints_benchmark)
+        # Delay
+        benchmark_delays = footprints_baseline = result_df[result_df["zone"] == zone][
+            "delay_benchmark"
+        ].to_list()
+        benchmark_delays_hourly = list(
+            np.ma.median(np.reshape(benchmark_delays, (days, 24)), axis=0)
+        )
+        # Stats
         min_sav_rel = round(np.min(relative_savings), 4)
         max_sav_rel = round(np.max(relative_savings), 4)
         med_sav_rel = round(np.median(relative_savings), 4)
         min_sav_abs = round(np.min(absolute_savings), 4)
         max_sav_abs = round(np.max(absolute_savings), 4)
         med_sav_abs = round(np.median(absolute_savings), 4)
+        utc_shift = utc_shifts.get(zone)
         stats.append(
             {
                 "zone": zone,
+                "utc_shift_hours": utc_shift,
                 "min_savings_rel": min_sav_rel,
                 "max_savings_rel": max_sav_rel,
                 "med_savings_rel": med_sav_rel,
@@ -337,16 +350,40 @@ def plot(
                 "med_savings_gCO2eq": med_sav_abs,
             }
         )
-        savings_hourly_median = np.ma.median(
-            relative_savings.reshape((days, 24)),
-            axis=0,
+        savings_hourly_median = list(
+            np.ma.median(
+                relative_savings.reshape((days, 24)),
+                axis=0,
+            )
         )
-        savings_hourly_absolute_median = np.ma.median(
-            absolute_savings.reshape((days, 24)), axis=0
+        savings_hourly_absolute_median = list(
+            np.ma.median(absolute_savings.reshape((days, 24)), axis=0)
         )
-
+        # Normalize to local time
+        hours = []
+        for hour in range(24):
+            hour += utc_shift
+            hour = hour % 24
+            hours.append(hour)
+        min_index = hours.index(min(hours))
+        if min_index != 0:
+            lower = hours[min_index:]
+            upper = hours[:min_index]
+            hours = lower + upper
+            lower = savings_hourly_median[min_index:]
+            upper = savings_hourly_median[:min_index]
+            savings_hourly_median = lower + upper
+            lower = savings_hourly_absolute_median[min_index:]
+            upper = savings_hourly_absolute_median[:min_index]
+            savings_hourly_absolute_median = lower + upper
+            lower = benchmark_delays_hourly[min_index:]
+            upper = benchmark_delays_hourly[:min_index]
+            benchmark_delays_hourly = lower + upper
+        # Data for plotting
+        res_hours.update({zone: hours})
         res_relative.update({zone: savings_hourly_median})
         res_absolute.update({zone: savings_hourly_absolute_median})
+        res_delay.update({zone: benchmark_delays_hourly})
         res_avg_rel.update(
             {zone: (np.average(savings_hourly_median), zone_colors.get(zone))}
         )
@@ -373,17 +410,9 @@ def plot(
 
     ### DELAY
     for zone in zones:
-        benchmark_delays = footprints_baseline = result_df[result_df["zone"] == zone][
-            "delay_benchmark"
-        ].to_list()
-        benchmark_delays_hourly = np.ma.median(
-            np.reshape(benchmark_delays, (days, 24)), axis=0
-        )
-        # ca_hourly_delay = np.ma.median(np.reshape(ca_delays, (DAYS, 24)), axis=0)
-        # plt.plot(hours, ca_hourly_delay, color="blue", label="FIFO")
         plt.plot(
-            hours,
-            benchmark_delays_hourly,
+            res_hours.get(zone),
+            res_delay.get(zone),
             label=zone,
             color=zone_colors.get(zone),
             linewidth=2,
@@ -391,7 +420,7 @@ def plot(
         )
     plt.ylabel("Avg. Delay [hours]")
     plt.ylim(0, 24)
-    plt.xlabel("Hour of Day")
+    plt.xlabel("Hour of Day (localized)")
     plt.grid(axis="y", linewidth=0.5)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.tight_layout()
@@ -401,7 +430,7 @@ def plot(
     ### ABSOLUTE SAVINGS
     for zone, res_abs in res_absolute.items():
         plt.plot(
-            hours,
+            res_hours.get(zone),
             res_abs,
             label=zone,
             color=zone_colors.get(zone),
@@ -409,7 +438,7 @@ def plot(
             alpha=0.7,
         )
     plt.ylabel("Median g$\mathregular{CO_2}$-eq. Saved")
-    plt.xlabel("Hour of Day")
+    plt.xlabel("Hour of Day (localized)")
     # plt.ylim(-100, 1000)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     # plt.yscale("symlog", base=10)
@@ -421,7 +450,7 @@ def plot(
     ### RELATIVE SAVINGS
     for zone, res_rel in res_relative.items():
         plt.plot(
-            hours,
+            res_hours.get(zone),
             res_rel,
             label=zone,
             color=zone_colors.get(zone),
@@ -429,7 +458,7 @@ def plot(
             alpha=0.7,
         )
     plt.ylabel("Median Fraction of g$\mathregular{CO_2}$-eq. Saved")
-    plt.xlabel("Hour of Day")
+    plt.xlabel("Hour of Day (localized)")
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()

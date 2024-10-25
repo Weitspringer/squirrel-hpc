@@ -1,19 +1,21 @@
 """
-Timeshifting Experiment: Carbon-Aware Scheduling vs. FIFO
+Temporal Shifting vs. FIFO
 
-This experiment investigates job scheduling on a single-node cluster ("c1") to compare two scheduling strategies:
+This experiment investigates job scheduling on a single-node cluster ("c1")
+to compare two scheduling strategies:
 1. Carbon-Agnostic FIFO (First-In-First-Out)
 2. Temporal Shifting based on (lifecycle) grid carbon intensity (GCI).
 
 **Experiment Setup:**
-- 5 jobs are submitted sequentially, each requiring 1 hour to complete.
+- Based on measurements of 3 different TPCx-AI jobs.
+- 3 jobs are submitted sequentially.
 - The jobs have increasing power demands (wattage) on node "c1":
-  - Job 1: 50W
-  - Job 2: 100W
-  - Job 3: 150W
-  - Job 4: 200W
-  - Job 5: 250W
-- The aim is to evaluate the environmental impact of the two scheduling strategies in terms of grid carbon emissions.
+  - Job 1 (1 hour) : 66.32  W
+  - Job 2 (1 hour) : 100.31 W
+  - Job 3 (2 hours): 113.15 W (hour 1)
+                     7.87 W (hour 2)
+- The aim is to evaluate the environmental impact of the two scheduling strategies
+in terms of emitted gCO2-eq.
 
 **Global Grid Zones Analyzed:**
 - Germany (DE) which has a very heterogeneous energy mix.
@@ -24,14 +26,16 @@ This experiment investigates job scheduling on a single-node cluster ("c1") to c
 
 **Methodology:**
 - Schedulers have access to real-time grid carbon intensity data for each zone.
-- Both scheduling approaches are able to schedule jobs within a 24-hour window, factoring in grid conditions.
+- Both scheduling approaches are able to schedule jobs within a 24-hour window.
 - The experiment runs for every hour of the day using historical grid data from 2023.
 - The analysis calculates:
-  1. Median carbon savings of time-shifting scheduling compared to the FIFO approach, grouped by each hour of the day.
+  1. Median carbon savings of time-shifting scheduling compared to the FIFO approach,
+     grouped by each hour of the day.
   2. Average job delay caused by the time-shifting strategy.
 
 **Output:**
-- Visualizations of the results, including hourly median carbon savings and job delays, are stored as PDF files in the designated output directory.
+- Visualizations of the results, including hourly median carbon savings and job delays,
+  are stored as PDF files in the designated output directory.
 """
 
 from pathlib import Path
@@ -41,13 +45,23 @@ from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 
 from src.sim.common.pipeline import main, plot, JobSubmission
 
-# Experiment configuration
-ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
-START = "2023-08-01T00:00:00+00:00"
-DAYS = 1
+### Experiment configuration ###
+# Define energy zones for simulation
+ZONES = [
+    {"name": "IS", "utc_shift_hours": +0},
+    {"name": "IN-WE", "utc_shift_hours": +5.5},
+    {"name": "NO", "utc_shift_hours": +2},
+    {"name": "AU-NSW", "utc_shift_hours": +11},
+    {"name": "DE", "utc_shift_hours": +1},
+]
+# When does the scheduling take place first?
+START = "2022-12-31T23:00:00+00:00"
+# Schedules are calculated hourly. For how many days?
+DAYS = 364
+# Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        id="job1",
+        job_id="job1",
         partitions=["admin"],
         reserved_hours=1,
         num_gpus=None,
@@ -55,7 +69,7 @@ JOBS = [
         power_draws={"c01": [66.32]},
     ),
     JobSubmission(
-        id="job2",
+        job_id="job2",
         partitions=["admin"],
         reserved_hours=1,
         num_gpus=None,
@@ -63,7 +77,7 @@ JOBS = [
         power_draws={"c01": [100.31]},
     ),
     JobSubmission(
-        id="job3",
+        job_id="job3",
         partitions=["admin"],
         reserved_hours=2,
         num_gpus=None,
@@ -71,13 +85,19 @@ JOBS = [
         power_draws={"c01": [113.15, 7.87]},
     ),
 ]
+# What is the lookahead?
 LOOKAHEAD_HOURS = 24
+# Cluster configuration.
 CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
+# TDP configuration.
+TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
+# Define where results will be stored.
 RESULT_DIR = (
     Config.get_local_paths()["viz_path"] / "scenarios" / "scenario1" / "ascending"
 )
 
 
+### Experiment execution ###
 def run():
     """Run this scenario."""
     main(
@@ -97,4 +117,4 @@ def run():
 
 def visualize():
     """Plot the results."""
-    plot(days=DAYS, result_dir=RESULT_DIR)
+    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)
