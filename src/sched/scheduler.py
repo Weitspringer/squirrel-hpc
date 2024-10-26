@@ -257,6 +257,8 @@ class TemporalShifting(PlanningStrategy):
 
 
 class SpatialGreedyShifting(PlanningStrategy):
+    """Greedily shift workloads towards nodes with low TDP values."""
+
     def allocate_resources(
         self,
         job_id: str,
@@ -285,8 +287,7 @@ class SpatialGreedyShifting(PlanningStrategy):
         # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
         sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
         # Try to allocate resources greedy for "best" node
-        for i in range(len(sorted_nodes)):
-            node, _ = sorted_nodes[i]
+        for _, (node, _) in enumerate(sorted_nodes):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
@@ -318,6 +319,11 @@ class SpatialGreedyShifting(PlanningStrategy):
 
 
 class SpatialShifting(PlanningStrategy):
+    """Shift workloads towards nodes with low TDP values.
+    Balances more than SpatialGreedyShifting to lower delay
+    and circumvent node starvation.
+    """
+
     def allocate_resources(
         self,
         job_id: str,
@@ -353,17 +359,33 @@ class SpatialShifting(PlanningStrategy):
         hour_marker = 0  # Tracks the starting hour for the current pool.
 
         # Create pools of nodes based on the difference in their TDP values.
-        for i in range(len(sorted_nodes)):
+        for i, (node, tdp) in enumerate(sorted_nodes):
             # Add the current node to the pool.
-            node, tdp = sorted_nodes[i]
             curr_pool.append(node)
             # Calculate the TDP difference to the next node.
             if i < len(sorted_nodes) - 1:
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
-            # If the TDP difference is non-zero, create a new pool.
-            if distance_next_tdp != 0:
-                # Calculate the next hour marker based on the TDP difference.
-                next_marker = hour_marker + int(distance_next_tdp / 10)
+                if distance_next_tdp != 0:
+                    # Calculate the next hour marker based on the TDP difference.
+                    next_marker = hour_marker + int(distance_next_tdp / 10)
+                    # Adjust the hour marker if it exceeds the available timeslots.
+                    if not hour_marker <= len(timeslots) - hours:
+                        # Ensure marker is within bounds.
+                        hour_marker = len(timeslots) - hours
+                        # Merge the current pool with any existing pool at the last marker.
+                        if hour_marker in load_balance_pools:
+                            prev_pool = load_balance_pools.get(len(timeslots) - hours)
+                            prev_pool += curr_pool
+                        else:
+                            load_balance_pools.update({hour_marker: curr_pool})
+                    else:
+                        # Otherwise, add the current pool to the load balance pools.
+                        load_balance_pools.update({hour_marker: curr_pool})
+                    # Move the hour marker forward and reset the current pool.
+                    hour_marker = next_marker
+                    curr_pool = []
+            else:
+                # We reached the last node
                 # Adjust the hour marker if it exceeds the available timeslots.
                 if not hour_marker <= len(timeslots) - hours:
                     # Ensure marker is within bounds.
@@ -377,9 +399,6 @@ class SpatialShifting(PlanningStrategy):
                 else:
                     # Otherwise, add the current pool to the load balance pools.
                     load_balance_pools.update({hour_marker: curr_pool})
-                # Move the hour marker forward and reset the current pool.
-                hour_marker = next_marker
-                curr_pool = []
 
         # Initialize the list of allocation pools to try and allocate resources from.
         alloc_pools = []

@@ -1,3 +1,6 @@
+"""Errors which are thrown during scheduling."""
+
+
 class NoSuitableNodeException(Exception):
     """Raise if there are no nodes which match the user's requirements."""
 
