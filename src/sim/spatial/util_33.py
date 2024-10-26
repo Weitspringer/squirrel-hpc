@@ -23,20 +23,23 @@ START = "2022-12-31T23:00:00+00:00"
 # Schedules are calculated hourly. For how many days?
 DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
-JOBS = [
-    JobSubmission(
-        job_id="tpcxai-sf1",
-        partitions=["jinx"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={
-            "b": [128.94, 0],
-            "a": [191.51, 70.87],
-            "c": [119.78, 1.34],
-        },
-    ),
-]
+JOBS = []
+
+for i in range(12):
+    JOBS.append(
+        JobSubmission(
+            job_id=f"tpcxai-sf1_[{i}]",
+            partitions=["jinx"],
+            reserved_hours=1,
+            num_gpus=None,
+            gpu_name=None,
+            power_draws={
+                "cx16": [128.94, 0],
+                "cx17": [191.51, 70.87],
+                "gx03": [119.78, 1.34],
+            },
+        )
+    )
 # What is the lookahead?
 LOOKAHEAD_HOURS = 24
 # Cluster configuration.
@@ -44,9 +47,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
 # TDP configuration.
 META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
 # Define where results will be stored.
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "single-job"
-)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "util_33"
 
 
 ### Experiment execution ###

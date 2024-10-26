@@ -7,7 +7,7 @@
     "command": [
       "show",
       "node",
-      "b,a,c"
+      "cx16,cx17,gx03"
     ],
     "Slurm": {
       "version": {
@@ -119,7 +119,7 @@
       "last_busy": 1729697634,
       "mcs_label": "",
       "specialized_memory": 16384,
-      "name": "b",
+      "name": "cx16",
       "next_state_after_reboot": [
         "INVALID",
         "PERFCTRS",
@@ -146,8 +146,8 @@
         "POWER_DRAIN",
         "DYNAMIC_NORM"
       ],
-      "address": "b",
-      "hostname": "b",
+      "address": "cx16",
+      "hostname": "cx16",
       "state": [
         "IDLE"
       ],
@@ -282,7 +282,7 @@
       "last_busy": 1729753640,
       "mcs_label": "",
       "specialized_memory": 16384,
-      "name": "a",
+      "name": "cx17",
       "next_state_after_reboot": [
         "INVALID",
         "PERFCTRS",
@@ -309,8 +309,8 @@
         "POWER_DRAIN",
         "DYNAMIC_NORM"
       ],
-      "address": "a",
-      "hostname": "a",
+      "address": "cx17",
+      "hostname": "cx17",
       "state": [
         "IDLE"
       ],
@@ -453,7 +453,7 @@
       "last_busy": 1729800931,
       "mcs_label": "",
       "specialized_memory": 16384,
-      "name": "c",
+      "name": "gx03",
       "next_state_after_reboot": [
         "INVALID",
         "PERFCTRS",
@@ -480,8 +480,8 @@
         "POWER_DRAIN",
         "DYNAMIC_NORM"
       ],
-      "address": "c",
-      "hostname": "c",
+      "address": "gx03",
+      "hostname": "gx03",
       "state": [
         "ALLOCATED"
       ],
