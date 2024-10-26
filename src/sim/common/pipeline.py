@@ -350,15 +350,16 @@ def plot(
             "delay_benchmark"
         ].to_list()
         benchmark_delays_hourly = list(
-            np.ma.median(np.reshape(benchmark_delays, (days, 24)), axis=0)
+            np.ma.average(np.reshape(benchmark_delays, (days, 24)), axis=0)
         )
         # Stats
         min_sav_rel = round(np.min(relative_savings), 4)
         max_sav_rel = round(np.max(relative_savings), 4)
-        med_sav_rel = round(np.median(relative_savings), 4)
+        avg_sav_rel = round(np.average(relative_savings), 4)
         min_sav_abs = round(np.min(absolute_savings), 4)
         max_sav_abs = round(np.max(absolute_savings), 4)
-        med_sav_abs = round(np.median(absolute_savings), 4)
+        avg_sav_abs = round(np.average(absolute_savings), 4)
+        avg_del = round(np.average(benchmark_delays_hourly), 4)
         utc_shift = utc_shifts.get(zone)
         stats.append(
             {
@@ -366,20 +367,21 @@ def plot(
                 "utc_shift_hours": utc_shift,
                 "min_savings_rel": min_sav_rel,
                 "max_savings_rel": max_sav_rel,
-                "med_savings_rel": med_sav_rel,
+                "avg_savings_rel": avg_sav_rel,
                 "min_savings_gCO2eq": min_sav_abs,
                 "max_savings_gCO2eq": max_sav_abs,
-                "med_savings_gCO2eq": med_sav_abs,
+                "avg_savings_gCO2eq": avg_sav_abs,
+                "avg_delay_hours": avg_del,
             }
         )
-        savings_hourly_median = list(
-            np.ma.median(
+        savings_hourly_avg = list(
+            np.ma.average(
                 relative_savings.reshape((days, 24)),
                 axis=0,
             )
         )
-        savings_hourly_absolute_median = list(
-            np.ma.median(absolute_savings.reshape((days, 24)), axis=0)
+        savings_hourly_absolute_avg = list(
+            np.ma.average(absolute_savings.reshape((days, 24)), axis=0)
         )
         # Normalize to local time
         hours = []
@@ -392,22 +394,22 @@ def plot(
             lower = hours[min_index:]
             upper = hours[:min_index]
             hours = lower + upper
-            lower = savings_hourly_median[min_index:]
-            upper = savings_hourly_median[:min_index]
-            savings_hourly_median = lower + upper
-            lower = savings_hourly_absolute_median[min_index:]
-            upper = savings_hourly_absolute_median[:min_index]
-            savings_hourly_absolute_median = lower + upper
+            lower = savings_hourly_avg[min_index:]
+            upper = savings_hourly_avg[:min_index]
+            savings_hourly_avg = lower + upper
+            lower = savings_hourly_absolute_avg[min_index:]
+            upper = savings_hourly_absolute_avg[:min_index]
+            savings_hourly_absolute_avg = lower + upper
             lower = benchmark_delays_hourly[min_index:]
             upper = benchmark_delays_hourly[:min_index]
             benchmark_delays_hourly = lower + upper
         # Data for plotting
         res_hours.update({zone: hours})
-        res_relative.update({zone: savings_hourly_median})
-        res_absolute.update({zone: savings_hourly_absolute_median})
+        res_relative.update({zone: savings_hourly_avg})
+        res_absolute.update({zone: savings_hourly_absolute_avg})
         res_delay.update({zone: benchmark_delays_hourly})
         res_avg_rel.update(
-            {zone: (np.average(savings_hourly_median), zone_colors.get(zone))}
+            {zone: (np.average(savings_hourly_avg), zone_colors.get(zone))}
         )
 
     ### AVERAGE RELATIVE SAVINGS
@@ -498,3 +500,35 @@ def plot(
     stats_df = pd.DataFrame(stats)
     stats_df = stats_df.set_index(keys=["zone"])
     stats_df.to_csv(data_dir / "stats.csv")
+
+
+def plot_year_gci(year: str, zones_dict: list[dict]):
+    """Plot median GCI in the given year for each hour of the day."""
+    ### Dynamically set unique colors for zones
+    zones = [x.get("name") for x in zones_dict]
+    if len(zones) <= 8:
+        cm = plt.get_cmap("Set2")
+    elif len(zones) <= 10:
+        cm = plt.get_cmap("tab10")
+    elif len(zones) <= 20:
+        cm = plt.get_cmap("tab20")
+    else:
+        cm = plt.get_cmap("hsv")
+    cmaplist = [cm(1.0 * i / len(zones)) for i in range(len(zones))]
+    zone_colors = {}
+    for idx, color in enumerate(cmaplist):
+        zone_colors.update({zones[idx]: color})
+    # Get data for each zone
+    influx_options = Config.get_influx_config()["gci"]["history"]
+    for zone in zones:
+        influx_options.get("tags").update({"zone": zone})
+        gci_data = get_gci_data(
+            pd.to_datetime(f"{int(year)-1}-12-31T23:00:00+00:00"),
+            pd.to_datetime(f"{int(year)}-12-31T23:00:00+00:00"),
+            options=influx_options,
+        )
+        gci_hourly = list(
+            np.ma.average(np.reshape(gci_data["gci"].to_list(), (365, 24)), axis=0)
+        )
+        plt.plot(range(24), list(gci_hourly))
+    plt.show()
