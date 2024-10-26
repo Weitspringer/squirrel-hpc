@@ -359,6 +359,7 @@ class SpatialShifting(PlanningStrategy):
         hour_marker = 0  # Tracks the starting hour for the current pool.
 
         # Create pools of nodes based on the difference in their TDP values.
+        balance_grade = 5  # Higher value leads to closer hour markers
         for i, (node, tdp) in enumerate(sorted_nodes):
             # Add the current node to the pool.
             curr_pool.append(node)
@@ -367,7 +368,7 @@ class SpatialShifting(PlanningStrategy):
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
                 if distance_next_tdp != 0:
                     # Calculate the next hour marker based on the TDP difference.
-                    next_marker = hour_marker + int(distance_next_tdp / 10)
+                    next_marker = hour_marker + int(distance_next_tdp / balance_grade)
                     # Adjust the hour marker if it exceeds the available timeslots.
                     if not hour_marker <= len(timeslots) - hours:
                         # Ensure marker is within bounds.
