@@ -32,7 +32,7 @@ for i in range(12):
         JobSubmission(
             job_id=f"tpcxai-sf1_[{i}]",
             partitions=["jinx"],
-            reserved_hours=1,
+            reserved_hours=2,
             num_gpus=None,
             gpu_name=None,
             power_draws={
@@ -49,7 +49,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
 # TDP configuration.
 META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
 # Define where results will be stored.
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "util_33"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "vs-fifo"
 
 
 ### Experiment execution ###

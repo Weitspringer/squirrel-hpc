@@ -8,10 +8,10 @@ to compare two scheduling strategies:
 
 **Experiment Setup:**
 - Based on measurements of a HPCG workload in related work (Chronus).
-- 1 job is submitted.
+- 1 job is submitted, 8 times for 33% utilization on a single node.
 - The job has the following power demands (wattage) on node "c1":
   - Job 1 (1 hour) : 59.56 W (energy-efficient with 11% energy savings)
-  - Job 2 (1 hour) : 66.32 W (temporal shifting)
+  - Job 1 (1 hour) : 66.32 W (temporal shifting)
 - The aim is to evaluate the environmental impact of the two scheduling strategies
 in terms of emitted gCO2-eq.
 
@@ -61,23 +61,25 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS_1 = [
     JobSubmission(
-        job_id="hpcg",
+        job_id=f"hpcg_[{i}]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
         power_draws={"cx01": [59.56]},
     )
+    for i in range(8)
 ]
 JOBS_2 = [
     JobSubmission(
-        job_id="hpcg",
+        job_id=f"hpcg_[{i}]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
         power_draws={"cx01": [66.32]},
     )
+    for i in range(8)
 ]
 # What is the lookahead?
 LOOKAHEAD_HOURS = 24
@@ -110,4 +112,4 @@ def run():
 
 def visualize():
     """Plot the results."""
-    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES, rel_ylim=(-12, 50))
+    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)

@@ -62,29 +62,14 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        job_id="tpcxai-sf1_[1]",
+        job_id=f"tpcxai-sf1_[{i}]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
         gpu_name=None,
         power_draws={"cx01": [66.32]},
-    ),
-    JobSubmission(
-        job_id="tpcxai-sf1_[2]",
-        partitions=["magic"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [66.32]},
-    ),
-    JobSubmission(
-        job_id="tpcxai-sf1_[3]",
-        partitions=["magic"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [66.32]},
-    ),
+    )
+    for i in range(8)
 ]
 # What is the lookahead?
 LOOKAHEAD_HOURS = 24

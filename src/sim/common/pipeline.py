@@ -14,6 +14,8 @@ from src.data.influxdb import get_gci_data
 from src.sched.scheduler import Scheduler, PlanningStrategy
 from src.sched.timetable import Timetable
 
+# pylint: disable=too-many-arguments, too-many-locals, too-few-public-methods
+
 
 class JobSubmission:
     """Job submission for simulation"""
@@ -301,14 +303,14 @@ def plot(
     days: int,
     result_dir: Path,
     zones_dict: list[dict],
-    rel_ylim: tuple[int, int] = (0, 50),
 ) -> None:
     """Visualize scenario results."""
+    # pylint: disable=anomalous-backslash-in-string
 
     ### Load result data
     data_dir = result_dir / "data"
     result_df = pd.read_csv(data_dir / "results.csv")
-    zones = result_df["zone"].unique()
+    zones = sorted(result_df["zone"].unique())
 
     ### Dynamically set unique colors for zones
     if len(zones) <= 8:
@@ -417,6 +419,8 @@ def plot(
         sorted(res_avg_rel.items(), key=lambda item: item[1][0], reverse=True)
     )
     res_ar_values = list(map(lambda x: x[0] * 100, res_avg_rel_sorted.values()))
+    min_v = min(res_ar_values)
+    max_v = max(res_ar_values)
     res_ar_colors = list(map(lambda x: x[1], res_avg_rel_sorted.values()))
     plt.bar(
         range(len(res_ar_values)),
@@ -424,12 +428,18 @@ def plot(
         align="center",
         color=res_ar_colors,
     )
+    plt.gca().axes.set_axisbelow(True)
     plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
-    plt.ylim(rel_ylim)
-    plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
-    plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
-    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100))
-    plt.grid(axis="y", linewidth=0.5)
+    h_lim = 0
+    if min_v < 0:
+        plt.axhspan(0, min_v, color="tab:red", alpha=0.1, zorder=-100)
+        h_lim = min_v - 2
+    if max_v < 30:
+        max_v = 30
+    plt.ylim(h_lim, max_v)
+    plt.ylabel("g$\mathregular{CO_2}$-eq. Savings")
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
+    plt.grid(axis="y", linewidth=1, alpha=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "avg-savings-relative.pdf")
     plt.clf()
@@ -444,54 +454,84 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Avg. Delay")
+    plt.locator_params(axis="x", nbins=24)
+    plt.gca().axes.set_axisbelow(True)
+    plt.ylabel("Average Job Delay")
     plt.ylim(0, 24)
     plt.xlabel("Hour of Day (localized)")
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dh"))
-    plt.grid(axis="y", linewidth=0.5)
+    plt.grid(axis="y", linewidth=1, alpha=0.2)
+    plt.grid(axis="x", linewidth=1, alpha=0.2)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.tight_layout()
     plt.savefig(result_dir / "delay.pdf")
     plt.clf()
 
     ### ABSOLUTE SAVINGS
+    min_v = 0
+    max_v = 0
     for zone, res_abs in res_absolute.items():
+        max_val = max(res_abs)
+        min_val = min(res_abs)
+        min_v = min(min_val, min_v)
+        max_v = max(max_val, max_v)
         plt.plot(
             res_hours.get(zone),
             res_abs,
             label=zone,
             color=zone_colors.get(zone),
             linewidth=2,
-            alpha=0.7,
         )
-    plt.ylabel("$\mathregular{CO_2}$-eq. Saved")
+    plt.locator_params(axis="x", nbins=24)
+    plt.gca().axes.set_axisbelow(True)
+    plt.ylabel("Average $\mathregular{CO_2}$-eq. Saved")
     plt.xlabel("Hour of Day (localized)")
+    if min_v < 0:
+        h_lim = min_v - 10
+        plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
+    max_v += 10
+    plt.ylim(h_lim, max_v)
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     # plt.yscale("symlog", base=10)
-    plt.grid(axis="y", linewidth=0.5)
+    plt.grid(axis="y", linewidth=1, alpha=0.3)
+    plt.grid(axis="x", linewidth=1, alpha=0.3)
     plt.tight_layout()
     plt.savefig(result_dir / "savings-absolute.pdf")
     plt.clf()
 
     ### RELATIVE SAVINGS
+    min_v = 0
+    max_v = 0
     for zone, res_rel in res_relative.items():
         res_rel = list(map(lambda x: x * 100, res_rel))
+        min_val = min(res_rel)
+        max_val = max(res_rel)
+        min_v = min(min_val, min_v)
+        max_v = max(max_val, max_v)
         plt.plot(
             res_hours.get(zone),
             res_rel,
             label=zone,
             color=zone_colors.get(zone),
             linewidth=2,
-            alpha=0.7,
         )
-    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100))
-    plt.ylabel("Fraction of g$\mathregular{CO_2}$-eq. Saved")
-    plt.ylim(rel_ylim)
-    plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
+    plt.locator_params(axis="x", nbins=24)
+    plt.gca().axes.set_axisbelow(True)
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
+    plt.ylabel("Average g$\mathregular{CO_2}$-eq. Saved")
+    if min_v < 0:
+        h_lim = min_v - 1
+        plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
+    if max_v < 30:
+        max_v = 30
+    else:
+        max_v += 2
+    plt.ylim(h_lim, max_v)
     plt.xlabel("Hour of Day (localized)")
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
-    plt.grid(axis="y", linewidth=0.5)
+    plt.grid(axis="y", linewidth=1, alpha=0.3)
+    plt.grid(axis="x", linewidth=1, alpha=0.3)
     plt.tight_layout()
     plt.savefig(result_dir / "savings-relative.pdf")
     plt.clf()
@@ -502,10 +542,13 @@ def plot(
     stats_df.to_csv(data_dir / "stats.csv")
 
 
-def plot_year_gci(year: str, zones_dict: list[dict]):
+def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
     """Plot median GCI in the given year for each hour of the day."""
+    # pylint: disable=anomalous-backslash-in-string
+
     ### Dynamically set unique colors for zones
-    zones = [x.get("name") for x in zones_dict]
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    zones = sorted([x.get("name") for x in zones_dict])
     if len(zones) <= 8:
         cm = plt.get_cmap("Set2")
     elif len(zones) <= 10:
@@ -518,6 +561,8 @@ def plot_year_gci(year: str, zones_dict: list[dict]):
     zone_colors = {}
     for idx, color in enumerate(cmaplist):
         zone_colors.update({zones[idx]: color})
+    # Get UTC time shifts for localization
+    utc_shifts = {z.get("name"): z.get("utc_shift_hours") for z in zones_dict}
     # Get data for each zone
     influx_options = Config.get_influx_config()["gci"]["history"]
     for zone in zones:
@@ -530,5 +575,31 @@ def plot_year_gci(year: str, zones_dict: list[dict]):
         gci_hourly = list(
             np.ma.average(np.reshape(gci_data["gci"].to_list(), (365, 24)), axis=0)
         )
-        plt.plot(range(24), list(gci_hourly))
-    plt.show()
+        # Localize time
+        utc_shift = utc_shifts.get(zone)
+        hours = []
+        for hour in range(24):
+            hour += utc_shift
+            hour = hour % 24
+            hours.append(hour)
+        min_index = hours.index(min(hours))
+        gci_hourly = list(gci_hourly)
+        if min_index != 0:
+            lower = hours[min_index:]
+            upper = hours[:min_index]
+            hours = lower + upper
+            lower = gci_hourly[min_index:]
+            upper = gci_hourly[:min_index]
+            gci_hourly = lower + upper
+        plt.plot(hours, gci_hourly, color=zone_colors.get(zone), label=zone)
+    plt.locator_params(axis="x", nbins=24)
+    plt.gca().axes.set_axisbelow(True)
+    plt.xlabel("Hour of Day (localized)")
+    plt.ylabel("Average $\mathregular{CO_2}$-eq.")
+    plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
+    plt.grid(axis="y", linewidth=1, alpha=0.3)
+    plt.grid(axis="x", linewidth=1, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.clf()

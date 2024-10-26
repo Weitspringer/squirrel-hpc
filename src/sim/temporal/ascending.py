@@ -8,11 +8,15 @@ to compare two scheduling strategies:
 
 **Experiment Setup:**
 - Based on measurements of 3 different TPCx-AI jobs.
-- 3 jobs are submitted sequentially.
+- 6 jobs are submitted sequentially, 8 hours to be allocated in total.
 - The jobs have increasing power demands (wattage) on node "c1":
   - Job 1 (1 hour) : 66.32  W
   - Job 2 (1 hour) : 100.31 W
   - Job 3 (2 hours): 113.15 W (hour 1)
+                     7.87 W (hour 2)
+  - Job 4 (1 hour) : 66.32  W
+  - Job 5 (1 hour) : 100.31 W
+  - Job 6 (2 hours): 113.15 W (hour 1)
                      7.87 W (hour 2)
 - The aim is to evaluate the environmental impact of the two scheduling strategies
 in terms of emitted gCO2-eq.
@@ -63,7 +67,7 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        job_id="tpcxai-sf1",
+        job_id="tpcxai-sf1_[0]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
@@ -71,7 +75,7 @@ JOBS = [
         power_draws={"cx01": [66.32]},
     ),
     JobSubmission(
-        job_id="tpcxai-sf10-no8",
+        job_id="tpcxai-sf10-no8_[0]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
@@ -79,7 +83,31 @@ JOBS = [
         power_draws={"cx01": [100.31]},
     ),
     JobSubmission(
-        job_id="tpcxai-sf3",
+        job_id="tpcxai-sf3_[0]",
+        partitions=["magic"],
+        reserved_hours=2,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [113.15, 7.87]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf1_[1]",
+        partitions=["magic"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [66.32]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf10-no8_[1]",
+        partitions=["magic"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [100.31]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf3_[1]",
         partitions=["magic"],
         reserved_hours=2,
         num_gpus=None,

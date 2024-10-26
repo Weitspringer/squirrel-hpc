@@ -63,7 +63,7 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = [
     JobSubmission(
-        job_id="tpcxai-sf3",
+        job_id="tpcxai-sf3_[0]",
         partitions=["magic"],
         reserved_hours=2,
         num_gpus=None,
@@ -71,7 +71,7 @@ JOBS = [
         power_draws={"cx01": [113.15, 7.87]},
     ),
     JobSubmission(
-        job_id="tpcxai-sf10-no8",
+        job_id="tpcxai-sf10-no8_[0]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
@@ -79,7 +79,31 @@ JOBS = [
         power_draws={"cx01": [100.31]},
     ),
     JobSubmission(
-        job_id="tpcxai-sf1",
+        job_id="tpcxai-sf1_[0]",
+        partitions=["magic"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [66.32]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf3_[1]",
+        partitions=["magic"],
+        reserved_hours=2,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [113.15, 7.87]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf10-no8_[1]",
+        partitions=["magic"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [100.31]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf1_[1]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
