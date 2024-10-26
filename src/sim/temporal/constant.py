@@ -45,6 +45,8 @@ from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
 from src.sim.common.pipeline import main, plot, JobSubmission
 
 ### Experiment configuration ###
+# What is the PUE of the data center?
+PUE = 1.4
 # Define energy zones for simulation
 ZONES = [
     {"name": "IS", "utc_shift_hours": +0},
@@ -100,6 +102,7 @@ RESULT_DIR = (
 def run():
     """Run this scenario."""
     main(
+        pue=PUE,
         zones=ZONES,
         start=START,
         days=DAYS,

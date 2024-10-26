@@ -12,6 +12,8 @@ from src.sched.scheduler import TemporalShifting, SpatiotemporalShifting
 from src.sim.common.pipeline import main, plot
 
 # Experiment configuration
+# What is the PUE of the data center?
+PUE = 1.4
 ZONES = ["DE"]
 START = "2023-08-01T00:00:00+00:00"
 DAYS = 31
@@ -30,14 +32,14 @@ for i in tqdm(job_range):
         jobs.update(
             {
                 f"job{i}": {
-                    "c01": 75,
-                    "c02": 75,
-                    "c03": 135,
-                    "g01": 108,
+                    "cx16": 75,
+                    "cx17": 135,
+                    "gx03": 108,
                 }
             }
         )
     main(
+        pue=PUE,
         zones=ZONES,
         start=START,
         days=DAYS,
@@ -50,7 +52,7 @@ for i in tqdm(job_range):
         strat_2=SpatiotemporalShifting(),
         forecasting=False,
     )
-    plot(days=DAYS, result_dir=RESULT_DIR)
+    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)
     stats_df = pd.read_csv(RESULT_DIR / "data" / "stats.csv")
     for index, row in stats_df.iterrows():
         df_zon = stats_df.at[index, "zone"]

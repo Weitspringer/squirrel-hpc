@@ -5,6 +5,7 @@ from multiprocessing import Queue, Process
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import numpy as np
 import pandas as pd
 
@@ -41,6 +42,7 @@ def _sim_schedule(
     forecasted_gci: pd.DataFrame,
     jobs: list[JobSubmission],
     cluster_path: Path,
+    cluster_pue: float,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
     Returns scheduling footprint and average job delay.
@@ -73,6 +75,7 @@ def _sim_schedule(
                 delays.append(index)
                 footprint += slot.gci * (
                     (watts / 1000)
+                    * cluster_pue
                     * (
                         (
                             datetime.fromisoformat(reservation.get("end"))
@@ -93,6 +96,7 @@ def _sim_schedule_forecasted(
     forecasted_gci: pd.DataFrame,
     jobs: list[JobSubmission],
     cluster_path: Path,
+    cluster_pue: float,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
     The GCI is not set from history, but forecasted.
@@ -129,6 +133,7 @@ def _sim_schedule_forecasted(
                 ].iloc[0]["gci"]
                 footprint += real_gci * (
                     (watts / 1000)
+                    * cluster_pue
                     * (
                         (
                             datetime.fromisoformat(reservation.get("end"))
@@ -144,6 +149,7 @@ def _sim_schedule_forecasted(
 
 
 def _compare(
+    pue: float,
     zone: str,
     start: str,
     days: int,
@@ -207,6 +213,7 @@ def _compare(
             forecasted_gci=part_forecasted,
             jobs=jobs_1,
             cluster_path=cluster_path,
+            cluster_pue=pue,
         )
         footprint_2, delay_2 = _sim_method(
             strategy=strat_2,
@@ -214,6 +221,7 @@ def _compare(
             forecasted_gci=part_forecasted,
             jobs=jobs_2,
             cluster_path=cluster_path,
+            cluster_pue=pue,
         )
         footprints_1.append(round(footprint_1, 2))
         delays_1.append(delay_1)
@@ -234,6 +242,7 @@ def _compare(
 
 
 def main(
+    pue: float,
     zones: list[dict],
     start: str,
     days: int,
@@ -256,6 +265,7 @@ def main(
         p = Process(
             target=_compare,
             args=(
+                pue,
                 z.get("name"),
                 start,
                 days,
@@ -415,7 +425,8 @@ def plot(
     plt.xticks(range(len(res_ar_values)), list(res_avg_rel_sorted.keys()))
     plt.ylim(rel_ylim)
     plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
-    plt.ylabel("Average of Median Relative g$\mathregular{CO_2}$-eq. Savings")
+    plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100))
     plt.grid(axis="y", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "avg-savings-relative.pdf")
@@ -431,9 +442,10 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Avg. Delay [hours]")
+    plt.ylabel("Avg. Delay")
     plt.ylim(0, 24)
     plt.xlabel("Hour of Day (localized)")
+    plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dh"))
     plt.grid(axis="y", linewidth=0.5)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.tight_layout()
@@ -450,8 +462,9 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Median g$\mathregular{CO_2}$-eq. Saved")
+    plt.ylabel("$\mathregular{CO_2}$-eq. Saved")
     plt.xlabel("Hour of Day (localized)")
+    plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     # plt.yscale("symlog", base=10)
     plt.grid(axis="y", linewidth=0.5)
@@ -470,7 +483,8 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Median Fraction of g$\mathregular{CO_2}$-eq. Saved")
+    plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100))
+    plt.ylabel("Fraction of g$\mathregular{CO_2}$-eq. Saved")
     plt.ylim(rel_ylim)
     plt.axhspan(0, -100, color="tab:red", alpha=0.1, zorder=-100)
     plt.xlabel("Hour of Day (localized)")
