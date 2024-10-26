@@ -16,10 +16,11 @@ from src.sim.common.pipeline import main, plot, JobSubmission
 PUE = 1.4
 ZONES = [{"name": "DE", "utc_shift_hours": +1}]
 START = "2023-08-01T00:00:00+00:00"
-DAYS = 31
+DAYS = 1
 MAX_JOBS = 16
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
+META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
 RESULT_DIR = (
     Config.get_local_paths()["viz_path"]
     / "scenarios"
@@ -63,7 +64,7 @@ def run():
             cluster_path=CLUSTER_PATH,
             result_dir=RESULT_DIR,
             strat_1=TemporalShifting(),
-            strat_2=SpatiotemporalShifting(),
+            strat_2=SpatiotemporalShifting(meta_path=META_PATH),
             forecasting=False,
         )
         plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)
@@ -87,6 +88,10 @@ def run():
     plt.tight_layout()
     plt.savefig(RESULT_DIR / "saturation.pdf")
     plt.clf()
+
+    # TODO: # of active nodes -> average
+    # TODO: % of utilization -> highest achievable saving drops
+    # TODO: When gx03 gets choosen instead of cx17 and cx17 idles, we have savings.
 
 
 def visualize():
