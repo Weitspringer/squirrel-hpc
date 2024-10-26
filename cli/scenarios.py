@@ -15,7 +15,11 @@ from src.sim.temporal import (
     forecast,
     chronus,
 )
-from src.sim.spatial import fifo as spat_fifo, temporal as spat_temp
+from src.sim.spatial import (
+    fifo as spat_fifo,
+    temporal as spat_temp,
+    greedy as spat_greedy,
+)
 from src.sim.spatiotemporal import temporal as spattemp_temp
 
 app = typer.Typer()
@@ -43,6 +47,7 @@ class SpatialEnum(enum.Enum):
 
     FIFO = "vs-fifo"
     TEMP = "vs-temporal"
+    GRED = "vs-greedy"
 
 
 class SpatiotemporalEnum(enum.Enum):
@@ -77,6 +82,8 @@ def spatial(
     sc = scenario.value
     if sc == SpatialEnum.FIFO.value:
         spat_fifo.run()
+    elif sc == SpatialEnum.GRED.value:
+        spat_greedy.run()
     elif sc == SpatialEnum.TEMP.value:
         spat_temp.run()
 
@@ -102,6 +109,7 @@ def visualize():
         chronus,
         spat_fifo,
         spat_temp,
+        spat_greedy,
         spattemp_temp,
     ]
     for sc in scenarios:
