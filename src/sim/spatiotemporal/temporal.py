@@ -14,7 +14,7 @@ from src.sim.common.pipeline import main, plot, JobSubmission
 # Experiment configuration
 # What is the PUE of the data center?
 PUE = 1.4
-ZONES = [{"name": "DE", "utc_shift_hours": +1}]
+ZONES = [{"name": "DE", "utc_shift_hours": +2}]
 START = "2023-08-01T00:00:00+00:00"
 DAYS = 1
 MAX_JOBS = 16

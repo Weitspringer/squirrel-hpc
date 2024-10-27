@@ -53,8 +53,8 @@ ZONES = [
     {"name": "IS", "utc_shift_hours": +0},
     {"name": "IN-WE", "utc_shift_hours": +5.5},
     {"name": "NO", "utc_shift_hours": +2},
-    {"name": "AU-NSW", "utc_shift_hours": +11},
-    {"name": "DE", "utc_shift_hours": +1},
+    {"name": "AU-NSW", "utc_shift_hours": +10},
+    {"name": "DE", "utc_shift_hours": +2},
 ]
 # When does the scheduling take place first?
 START = "2023-01-04T23:00:00+00:00"

@@ -523,8 +523,8 @@ def plot(
     if min_v < 0:
         h_lim = min_v - 1
         plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
-    if max_v < 30:
-        max_v = 30
+    if max_v < 40:
+        max_v = 40
     else:
         max_v += 2
     plt.ylim(h_lim, max_v)
