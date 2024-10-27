@@ -2,8 +2,11 @@
 
 from pathlib import Path
 
+from matplotlib import ticker
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+import scipy.optimize
 from tqdm import tqdm
 
 from src.config.squirrel_conf import Config
@@ -17,7 +20,7 @@ PUE = 1.4
 ZONES = [{"name": "DE", "utc_shift_hours": +2}]
 START = "2023-08-01T00:00:00+00:00"
 DAYS = 1
-MAX_JOBS = 16
+MAX_JOBS = 12
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
 META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
@@ -27,6 +30,10 @@ RESULT_DIR = (
     / "spatiotemporal"
     / "vs-temporal"
 )
+
+
+def _exponential_func(x, a, b, c, d):
+    return a * (b ** (x + c)) + d
 
 
 ### Experiment execution ###
@@ -74,24 +81,39 @@ def run():
             max_rel_savings_per_country.get(df_zon).append(row["avg_savings_rel"])
 
     for zone, sav_data in max_rel_savings_per_country.items():
+        popt, _ = scipy.optimize.curve_fit(_exponential_func, job_range, sav_data)
+        utilization = [
+            n_job * 0.02777777777777777777777777777778 for n_job in job_range
+        ]
         plt.plot(
-            job_range,
-            sav_data,
-            label=zone,
-            linewidth=3,
+            utilization,
+            _exponential_func(job_range, *popt),
+            color="tab:red",
+            label="Fitted Exponential Function",
+            linewidth=2,
             alpha=0.7,
         )
-    plt.ylabel("Average relative savings")
-    plt.xlabel("Amount of jobs")
-    plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(ZONES))
-    plt.grid(axis="y", linewidth=0.5)
-    plt.tight_layout()
-    plt.savefig(RESULT_DIR / "saturation.pdf")
-    plt.clf()
-
-    # TODO: # of active nodes -> average
-    # TODO: % of utilization -> highest achievable saving drops
-    # TODO: When gx03 gets choosen instead of cx17 and cx17 idles, we have savings.
+        plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
+        plt.gca().xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
+        plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
+        plt.xlabel("Utilization")
+        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(ZONES))
+        plt.grid(axis="y", linewidth=1, alpha=0.2)
+        plt.grid(axis="x", linewidth=1, alpha=0.2)
+        plt.ylim(0, 0.4)
+        plt.tight_layout()
+        plt.savefig(RESULT_DIR / "saturation.pdf")
+        plt.clf()
+        job_modulo_3 = ["1", "2", "0"]
+        sav_data_aggr = list(np.reshape(sav_data, (4, 3)).mean(axis=0))
+        plt.plot(job_modulo_3, sav_data_aggr)
+        plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
+        plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
+        plt.xlabel("Number of Jobs $mod$ Cluster Size")
+        plt.ylim(0, 0.4)
+        plt.grid(axis="y", linewidth=1, alpha=0.2)
+        plt.tight_layout()
+        plt.savefig(RESULT_DIR / "detail.pdf")
 
 
 def visualize():
