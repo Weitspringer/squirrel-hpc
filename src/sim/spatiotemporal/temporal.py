@@ -18,8 +18,8 @@ from src.sim.common.pipeline import main, plot, JobSubmission
 # What is the PUE of the data center?
 PUE = 1.4
 ZONES = [{"name": "DE", "utc_shift_hours": +2}]
-START = "2023-08-01T00:00:00+00:00"
-DAYS = 1
+START = "2023-01-01T00:00:00+00:00"
+DAYS = 364
 MAX_JOBS = 12
 LOOKAHEAD_HOURS = 24
 CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
@@ -89,7 +89,6 @@ def run():
             utilization,
             _exponential_func(job_range, *popt),
             color="tab:red",
-            label="Fitted Exponential Function",
             linewidth=2,
             alpha=0.7,
         )
@@ -97,7 +96,6 @@ def run():
         plt.gca().xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
         plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
         plt.xlabel("Utilization")
-        plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(ZONES))
         plt.grid(axis="y", linewidth=1, alpha=0.2)
         plt.grid(axis="x", linewidth=1, alpha=0.2)
         plt.ylim(0, 0.4)
