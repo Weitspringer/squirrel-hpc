@@ -569,7 +569,7 @@ def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
         influx_options.get("tags").update({"zone": zone})
         gci_data = get_gci_data(
             pd.to_datetime(f"{int(year)-1}-12-31T23:00:00+00:00"),
-            pd.to_datetime(f"{int(year)}-12-31T23:00:00+00:00"),
+            pd.to_datetime(f"{int(year)}-12-31T23:01:00+00:00"),
             options=influx_options,
         )
         gci_hourly = list(
