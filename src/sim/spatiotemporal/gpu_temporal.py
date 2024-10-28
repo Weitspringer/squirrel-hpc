@@ -1,29 +1,55 @@
-"""Spatiotemporal shifting experiment under test."""
+"""
+Spatiotemporal Shifting vs. Temporal Shifting
+
+GPU Workload
+"""
 
 from pathlib import Path
-
-from matplotlib import ticker
-import matplotlib.pyplot as plt
-import numpy as np
-import numpy.polynomial.polynomial as poly
-import pandas as pd
-from tqdm import tqdm
 
 from src.config.squirrel_conf import Config
 from src.sched.scheduler import TemporalShifting, SpatiotemporalShifting
 
 from src.sim.common.pipeline import main, plot, JobSubmission
 
-# Experiment configuration
+### Experiment configuration ###
 # What is the PUE of the data center?
 PUE = 1.4
-ZONES = [{"name": "DE", "utc_shift_hours": +2}]
+# Define energy zones for simulation
+ZONES = [
+    {"name": "IS", "utc_shift_hours": +0},
+    {"name": "IN-WE", "utc_shift_hours": +5.5},
+    {"name": "NO", "utc_shift_hours": +2},
+    {"name": "AU-NSW", "utc_shift_hours": +10},
+    {"name": "DE", "utc_shift_hours": +2},
+]
+# When does the scheduling take place first?
 START = "2022-12-31T23:00:00+00:00"
+# Schedules are calculated hourly. For how many days?
 DAYS = 364
-MAX_JOBS = 8
+# Define workloads which need to be scheduled for each iteration.
+JOBS = []
+
+for i in range(12):
+    JOBS.append(
+        JobSubmission(
+            job_id=f"tpcxai-sf1_[{i}]",
+            partitions=["sorcery"],
+            reserved_hours=2,
+            num_gpus=1,
+            gpu_name=None,
+            power_draws={
+                "gx01": [59.75, 1.35],
+                "gx03": [34.96, 0],
+            },
+        )
+    )
+# What is the lookahead?
 LOOKAHEAD_HOURS = 24
+# Cluster configuration.
 CLUSTER_PATH = Path("src") / "sim" / "data" / "2-node-cluster.json"
+# TDP configuration.
 META_PATH = Path("src") / "sim" / "data" / "2-node-meta.cfg"
+# Define where results will be stored.
 RESULT_DIR = (
     Config.get_local_paths()["viz_path"]
     / "scenarios"
@@ -32,88 +58,25 @@ RESULT_DIR = (
 )
 
 
-def _exponential_func(x, a, b, c, d):
-    return a * np.exp(b * x + c) + d
-
-
 ### Experiment execution ###
 def run():
     """Run this scenario."""
-    max_rel_savings_per_country = {}
-    for zone in ZONES:
-        max_rel_savings_per_country.update({zone.get("name"): []})
-    job_range = range(1, MAX_JOBS + 1)
-    for i in tqdm(job_range):
-        jobs = []
-        for j in range(i):
-            jobs.append(
-                JobSubmission(
-                    job_id=f"tpcxai-sf1_[{j}]",
-                    partitions=["sorcery"],
-                    reserved_hours=2,
-                    num_gpus=None,
-                    gpu_name=None,
-                    power_draws={
-                        "gx01": [59.75, 1.35],
-                        "gx03": [34.96, 0],
-                    },
-                )
-            )
-        main(
-            pue=PUE,
-            zones=ZONES,
-            start=START,
-            days=DAYS,
-            lookahead_hours=LOOKAHEAD_HOURS,
-            jobs_1=jobs,
-            jobs_2=jobs,
-            cluster_path=CLUSTER_PATH,
-            result_dir=RESULT_DIR,
-            strat_1=TemporalShifting(),
-            strat_2=SpatiotemporalShifting(meta_path=META_PATH),
-            forecasting=False,
-        )
-        plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)
-        stats_df = pd.read_csv(RESULT_DIR / "data" / "stats.csv")
-        for index, row in stats_df.iterrows():
-            df_zon = stats_df.at[index, "zone"]
-            max_rel_savings_per_country.get(df_zon).append(row["avg_savings_rel"])
-
-    for zone, sav_data in max_rel_savings_per_country.items():
-        utilization = [
-            n_job * 0.04166666666666666666666666666667 for n_job in job_range
-        ]
-        plt.plot(
-            utilization,
-            sav_data,
-            "o",
-            color="tab:orange",
-            linewidth=2,
-            alpha=0.7,
-            label="Measurement Data Points",
-        )
-        plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
-        plt.gca().xaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
-        plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
-        plt.xlabel("Utilization")
-        plt.grid(axis="y", linewidth=1, alpha=0.2)
-        plt.grid(axis="x", linewidth=1, alpha=0.2)
-        plt.ylim(0, 0.5)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(RESULT_DIR / "saturation.pdf")
-        plt.clf()
-        job_modulo_2 = ["1", "0"]
-        sav_data_aggr = list(np.reshape(sav_data, (4, 2)).mean(axis=0))
-        plt.plot(job_modulo_2, sav_data_aggr)
-        plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=1, decimals=0))
-        plt.ylabel("Average g$\mathregular{CO_2}$-eq. Savings")
-        plt.xlabel("Number of Jobs $mod$ Cluster Size")
-        plt.ylim(0, 0.5)
-        plt.grid(axis="y", linewidth=1, alpha=0.2)
-        plt.tight_layout()
-        plt.savefig(RESULT_DIR / "detail.pdf")
+    main(
+        pue=PUE,
+        zones=ZONES,
+        start=START,
+        days=DAYS,
+        lookahead_hours=LOOKAHEAD_HOURS,
+        jobs_1=JOBS,
+        jobs_2=JOBS,
+        cluster_path=CLUSTER_PATH,
+        result_dir=RESULT_DIR,
+        strat_1=TemporalShifting(),
+        strat_2=SpatiotemporalShifting(switch_threshold=0.75, meta_path=META_PATH),
+        forecasting=False,
+    )
 
 
 def visualize():
     """Plot the results."""
+    plot(days=DAYS, result_dir=RESULT_DIR, zones_dict=ZONES)

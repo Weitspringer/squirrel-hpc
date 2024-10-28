@@ -1,41 +1,5 @@
 """
 Temporal Shifting vs. FIFO (+ Forecast Error)
-
-This experiment investigates job scheduling on a single-node cluster ("c1")
-to compare two scheduling strategies:
-1. Carbon-Agnostic FIFO (First-In-First-Out)
-2. Temporal Shifting based on (lifecycle) grid carbon intensity (GCI).
-
-**Experiment Setup:**
-- Based on measurements of 3 different TPCx-AI jobs.
-- 3 jobs are submitted sequentially.
-- The jobs have decrasing power demands (wattage) on node "c1":
-  - Job 1 (1 hours): 113.15 W (hour 1)
-                     7.87 W (hour 2)
-  - Job 2 (1 hour) : 100.31 W
-  - Job 3 (1 hour) : 66.32  W
-- The aim is to evaluate the environmental impact of the two scheduling strategies
-in terms of emitted gCO2-eq.
-
-**Global Grid Zones Analyzed:**
-- Germany (DE) which has a very heterogeneous energy mix.
-- Iceland (IS) with low average GCI and low variability.
-- West India (IN-WE) with high average GCI and low variability.
-- Norway (NO) with low average GCI and medium variability. 
-- New South Wales, Australia (AUS-NSW) with high average GCI and medium variability.
-
-**Methodology:**
-- Schedulers have access to real-time grid carbon intensity data for each zone.
-- Both scheduling approaches are able to schedule jobs within a 24-hour window.
-- The experiment runs for every hour of the day using forecasted GCI.
-- The analysis calculates:
-  1. Median carbon savings of time-shifting scheduling compared to the FIFO approach,
-     grouped by each hour of the day.
-  2. Average job delay caused by the time-shifting strategy.
-
-**Output:**
-- Visualizations of the results, including hourly median carbon savings and job delays,
-  are stored as PDF files in the designated output directory.
 """
 
 from pathlib import Path
@@ -71,7 +35,23 @@ JOBS = [
         power_draws={"cx01": [113.15, 7.87]},
     ),
     JobSubmission(
+        job_id="tpcxai-sf3_[1]",
+        partitions=["magic"],
+        reserved_hours=2,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [113.15, 7.87]},
+    ),
+    JobSubmission(
         job_id="tpcxai-sf10-no8_[0]",
+        partitions=["magic"],
+        reserved_hours=1,
+        num_gpus=None,
+        gpu_name=None,
+        power_draws={"cx01": [100.31]},
+    ),
+    JobSubmission(
+        job_id="tpcxai-sf10-no8_[1]",
         partitions=["magic"],
         reserved_hours=1,
         num_gpus=None,
@@ -85,22 +65,6 @@ JOBS = [
         num_gpus=None,
         gpu_name=None,
         power_draws={"cx01": [66.32]},
-    ),
-    JobSubmission(
-        job_id="tpcxai-sf3_[1]",
-        partitions=["magic"],
-        reserved_hours=2,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [113.15, 7.87]},
-    ),
-    JobSubmission(
-        job_id="tpcxai-sf10-no8_[1]",
-        partitions=["magic"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [100.31]},
     ),
     JobSubmission(
         job_id="tpcxai-sf1_[1]",

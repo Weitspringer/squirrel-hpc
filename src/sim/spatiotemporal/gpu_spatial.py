@@ -1,11 +1,13 @@
 """
-Temporal Shifting vs. Energy Efficiency
+Spatiotemporal Shifting vs. Temporal Shifting
+
+GPU Workload
 """
 
 from pathlib import Path
 
 from src.config.squirrel_conf import Config
-from src.sched.scheduler import CarbonAgnosticFifo, TemporalShifting
+from src.sched.scheduler import SpatialShifting, SpatiotemporalShifting
 
 from src.sim.common.pipeline import main, plot, JobSubmission
 
@@ -25,36 +27,35 @@ START = "2022-12-31T23:00:00+00:00"
 # Schedules are calculated hourly. For how many days?
 DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
-JOBS_1 = [
-    JobSubmission(
-        job_id=f"hpcg_[{i}]",
-        partitions=["magic"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [59.56]},
+JOBS = []
+
+for i in range(12):
+    JOBS.append(
+        JobSubmission(
+            job_id=f"tpcxai-sf1_[{i}]",
+            partitions=["sorcery"],
+            reserved_hours=2,
+            num_gpus=1,
+            gpu_name=None,
+            power_draws={
+                "gx01": [59.75, 1.35],
+                "gx03": [34.96, 0],
+            },
+        )
     )
-    for i in range(8)
-]
-JOBS_2 = [
-    JobSubmission(
-        job_id=f"hpcg_[{i}]",
-        partitions=["magic"],
-        reserved_hours=1,
-        num_gpus=None,
-        gpu_name=None,
-        power_draws={"cx01": [66.32]},
-    )
-    for i in range(8)
-]
 # What is the lookahead?
 LOOKAHEAD_HOURS = 24
 # Cluster configuration.
-CLUSTER_PATH = Path("src") / "sim" / "data" / "single-node-cluster.json"
+CLUSTER_PATH = Path("src") / "sim" / "data" / "2-node-cluster.json"
 # TDP configuration.
-TDP_PATH = Path("src") / "sim" / "data" / "single-node-tdp.cfg"
+META_PATH = Path("src") / "sim" / "data" / "2-node-meta.cfg"
 # Define where results will be stored.
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "temporal" / "chronus"
+RESULT_DIR = (
+    Config.get_local_paths()["viz_path"]
+    / "scenarios"
+    / "spatiotemporal"
+    / "gpu-spatial"
+)
 
 
 ### Experiment execution ###
@@ -66,12 +67,12 @@ def run():
         start=START,
         days=DAYS,
         lookahead_hours=LOOKAHEAD_HOURS,
-        jobs_1=JOBS_1,
-        jobs_2=JOBS_2,
+        jobs_1=JOBS,
+        jobs_2=JOBS,
         cluster_path=CLUSTER_PATH,
         result_dir=RESULT_DIR,
-        strat_1=CarbonAgnosticFifo(),
-        strat_2=TemporalShifting(),
+        strat_1=SpatialShifting(balance_grade=1.5),
+        strat_2=SpatiotemporalShifting(switch_threshold=0.75, meta_path=META_PATH),
         forecasting=False,
     )
 

@@ -9,9 +9,9 @@ import typer
 from src.config.squirrel_conf import Config
 from src.sim.common.pipeline import plot_year_gci
 from src.sim.temporal import (
-    ascending,
+    worst,
     constant,
-    descending,
+    best,
     forecast,
     chronus,
 )
@@ -24,8 +24,12 @@ from src.sim.spatial import (
     gpu_greedy as spat_gpu_greedy,
 )
 from src.sim.spatiotemporal import (
+    cpu_fifo as spattemp_cpu_fifo,
     cpu_temporal as spattemp_cpu_temp,
+    cpu_spatial as spattemp_cpu_spat,
+    gpu_fifo as spattemp_gpu_fifo,
     gpu_temporal as spattemp_gpu_temp,
+    gpu_spatial as spattemp_gpu_spat,
 )
 
 app = typer.Typer()
@@ -66,9 +70,9 @@ def temporal(
     """Run scenario which evaluates temporal shifting."""
     sc = scenario.value
     if sc == TemporalEnum.SIN.value:
-        ascending.run()
+        worst.run()
         constant.run()
-        descending.run()
+        best.run()
         forecast.run()
     elif sc == TemporalEnum.CHRON.value:
         chronus.run()
@@ -97,18 +101,22 @@ def spatiotemporal(
     """Run scenario which evaluates spatiotemporal shifting."""
     sc = scenario.value
     if sc == SpatialEnum.CPU.value:
+        spattemp_cpu_fifo.run()
         spattemp_cpu_temp.run()
+        spattemp_cpu_spat.run()
     elif sc == SpatialEnum.GPU.value:
+        spattemp_gpu_fifo.run()
         spattemp_gpu_temp.run()
+        spattemp_gpu_spat.run()
 
 
 @app.command()
 def visualize():
     """Visualize results for available scenario results."""
     scenarios = [
-        ascending,
+        worst,
         constant,
-        descending,
+        best,
         forecast,
         chronus,
         spat_cpu_fifo,
@@ -117,6 +125,12 @@ def visualize():
         spat_gpu_fifo,
         spat_gpu_temp,
         spat_gpu_greedy,
+        spattemp_cpu_fifo,
+        spattemp_cpu_temp,
+        spattemp_cpu_spat,
+        spattemp_gpu_fifo,
+        spattemp_gpu_temp,
+        spattemp_gpu_spat,
     ]
     for sc in scenarios:
         if Path(sc.RESULT_DIR / "data" / "results.csv").exists():
