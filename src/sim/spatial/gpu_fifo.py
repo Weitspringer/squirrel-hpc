@@ -1,11 +1,13 @@
 """
 Spatial Shifting vs. FIFO
+
+GPU Workload
 """
 
 from pathlib import Path
 
 from src.config.squirrel_conf import Config
-from src.sched.scheduler import SpatialGreedyShifting, SpatialShifting
+from src.sched.scheduler import CarbonAgnosticFifo, SpatialShifting
 
 from src.sim.common.pipeline import main, plot, JobSubmission
 
@@ -27,31 +29,28 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = []
 
-for i in range(12):
+for i in range(8):
     JOBS.append(
         JobSubmission(
             job_id=f"tpcxai-sf1_[{i}]",
-            partitions=["jinx"],
+            partitions=["sorcery"],
             reserved_hours=2,
-            num_gpus=None,
+            num_gpus=1,
             gpu_name=None,
             power_draws={
-                "cx16": [128.94, 0],
-                "cx17": [191.51, 70.87],
-                "gx03": [119.78, 1.34],
+                "gx01": [59.75, 1.35],
+                "gx03": [34.96, 0],
             },
         )
     )
 # What is the lookahead?
 LOOKAHEAD_HOURS = 24
 # Cluster configuration.
-CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
+CLUSTER_PATH = Path("src") / "sim" / "data" / "2-node-cluster.json"
 # TDP configuration.
-META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
+META_PATH = Path("src") / "sim" / "data" / "2-node-meta.cfg"
 # Define where results will be stored.
-RESULT_DIR = (
-    Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "vs-greedy"
-)
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "gpu-fifo"
 
 
 ### Experiment execution ###
@@ -67,8 +66,8 @@ def run():
         jobs_2=JOBS,
         cluster_path=CLUSTER_PATH,
         result_dir=RESULT_DIR,
-        strat_1=SpatialGreedyShifting(meta_path=META_PATH),
-        strat_2=SpatialShifting(meta_path=META_PATH),
+        strat_1=CarbonAgnosticFifo(),
+        strat_2=SpatialShifting(balance_grade=1.5, meta_path=META_PATH),
         forecasting=False,
     )
 

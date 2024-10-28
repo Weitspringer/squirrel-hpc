@@ -16,11 +16,17 @@ from src.sim.temporal import (
     chronus,
 )
 from src.sim.spatial import (
-    fifo as spat_fifo,
-    temporal as spat_temp,
-    greedy as spat_greedy,
+    cpu_fifo as spat_cpu_fifo,
+    cpu_temporal as spat_cpu_temp,
+    cpu_greedy as spat_cpu_greedy,
+    gpu_fifo as spat_gpu_fifo,
+    gpu_temporal as spat_gpu_temp,
+    gpu_greedy as spat_gpu_greedy,
 )
-from src.sim.spatiotemporal import temporal as spattemp_temp
+from src.sim.spatiotemporal import (
+    cpu_temporal as spattemp_cpu_temp,
+    gpu_temporal as spattemp_gpu_temp,
+)
 
 app = typer.Typer()
 ZONES = [
@@ -35,25 +41,22 @@ ZONES = [
 class TemporalEnum(enum.Enum):
     """Options for temporal shifting scenarios."""
 
-    ASC = "asc"
-    CONS = "cons"
-    DESC = "desc"
-    FC = "desc+forecast"
+    SIN = "single"
     CHRON = "chronus"
 
 
 class SpatialEnum(enum.Enum):
     """Options for spatial shifting scenarios."""
 
-    FIFO = "vs-fifo"
-    TEMP = "vs-temporal"
-    GRED = "vs-greedy"
+    CPU = "cpu"
+    GPU = "gpu"
 
 
 class SpatiotemporalEnum(enum.Enum):
     """Options for spatiotemporal shifting scenarios."""
 
-    TEMP = "vs-temporal"
+    CPU = "cpu"
+    GPU = "gpu"
 
 
 @app.command()
@@ -62,13 +65,10 @@ def temporal(
 ):
     """Run scenario which evaluates temporal shifting."""
     sc = scenario.value
-    if sc == TemporalEnum.ASC.value:
+    if sc == TemporalEnum.SIN.value:
         ascending.run()
-    elif sc == TemporalEnum.CONS.value:
         constant.run()
-    elif sc == TemporalEnum.DESC.value:
         descending.run()
-    elif sc == TemporalEnum.FC.value:
         forecast.run()
     elif sc == TemporalEnum.CHRON.value:
         chronus.run()
@@ -80,12 +80,14 @@ def spatial(
 ):
     """Run scenario which evaluates spatial shifting."""
     sc = scenario.value
-    if sc == SpatialEnum.FIFO.value:
-        spat_fifo.run()
-    elif sc == SpatialEnum.GRED.value:
-        spat_greedy.run()
-    elif sc == SpatialEnum.TEMP.value:
-        spat_temp.run()
+    if sc == SpatialEnum.CPU.value:
+        spat_cpu_fifo.run()
+        spat_cpu_greedy.run()
+        spat_cpu_temp.run()
+    elif sc == SpatialEnum.GPU.value:
+        spat_gpu_fifo.run()
+        spat_gpu_greedy.run()
+        spat_gpu_temp.run()
 
 
 @app.command()
@@ -94,8 +96,10 @@ def spatiotemporal(
 ):
     """Run scenario which evaluates spatiotemporal shifting."""
     sc = scenario.value
-    if sc == SpatialEnum.TEMP.value:
-        spattemp_temp.run()
+    if sc == SpatialEnum.CPU.value:
+        spattemp_cpu_temp.run()
+    elif sc == SpatialEnum.GPU.value:
+        spattemp_gpu_temp.run()
 
 
 @app.command()
@@ -107,10 +111,12 @@ def visualize():
         descending,
         forecast,
         chronus,
-        spat_fifo,
-        spat_temp,
-        spat_greedy,
-        spattemp_temp,
+        spat_cpu_fifo,
+        spat_cpu_temp,
+        spat_cpu_greedy,
+        spat_gpu_fifo,
+        spat_gpu_temp,
+        spat_gpu_greedy,
     ]
     for sc in scenarios:
         if Path(sc.RESULT_DIR / "data" / "results.csv").exists():

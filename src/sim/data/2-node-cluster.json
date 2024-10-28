@@ -1,0 +1,369 @@
+{
+  "meta": {
+    "plugins": {
+      "data_parser": "data_parser\/v0.0.39",
+      "accounting_storage": "accounting_storage\/slurmdbd"
+    },
+    "command": [
+      "show",
+      "node",
+      "gx01,gx03"
+    ],
+    "Slurm": {
+      "version": {
+        "major": 23,
+        "micro": 6,
+        "minor": 2
+      },
+      "release": "23.02.6"
+    }
+  },
+  "nodes": [
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1726047364,
+      "cluster_name": "",
+      "cores": 64,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": {
+        "set": true,
+        "infinite": false,
+        "number": 15930
+      },
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 553342
+      },
+      "cpus": 256,
+      "effective_cpus": 256,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+        "consumed_energy": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "temperature": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "energy_update_time": 0,
+        "current_watts": 0
+      },
+      "extra": "",
+      "power": {
+        "maximum_watts": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "current_watts": 0,
+        "total_energy": 0,
+        "new_maximum_watts": 0,
+        "peak_watts": 0,
+        "lowest_watts": 0,
+        "new_job_time": 0,
+        "state": 0,
+        "time_start_day": 0
+      },
+      "features": [
+        "g",
+        "x",
+        "VND:NVIDIA",
+        "ARCH:X86",
+        "CPU_MNF:AMD",
+        "CPU_PROD:EPYC",
+        "CPU_GEN:ROME",
+        "CPU_SKU:7742",
+        "CPU_FRQ:2.25GHz",
+        "CPU_EXT:AVX2",
+        "GPU_SKU:A100",
+        "GPU_MEM:40GB",
+        "GPU_CC:8.0",
+        "GPU_GEN:AMPERE",
+        "IB:HDR",
+        "IB:DUALRAIL",
+        "ETH:100G"
+      ],
+      "active_features": [
+        "g",
+        "x",
+        "VND:NVIDIA",
+        "ARCH:X86",
+        "CPU_MNF:AMD",
+        "CPU_PROD:EPYC",
+        "CPU_GEN:ROME",
+        "CPU_SKU:7742",
+        "CPU_FRQ:2.25GHz",
+        "CPU_EXT:AVX2",
+        "GPU_SKU:A100",
+        "GPU_MEM:40GB",
+        "GPU_CC:8.0",
+        "GPU_GEN:AMPERE",
+        "IB:HDR",
+        "IB:DUALRAIL",
+        "ETH:100G"
+      ],
+      "gres": "gpu:a100:8(S:0-1)",
+      "gres_drained": "N\/A",
+      "gres_used": "gpu:a100:7(IDX:0-2,4-7),mps:0",
+      "last_busy": 1729950795,
+      "mcs_label": "",
+      "specialized_memory": 16384,
+      "name": "gx01",
+      "next_state_after_reboot": [
+        "INVALID",
+        "PERFCTRS",
+        "RESERVED",
+        "UNDRAIN",
+        "CLOUD",
+        "RESUME",
+        "DRAIN",
+        "COMPLETING",
+        "NOT_RESPONDING",
+        "POWERED_DOWN",
+        "FAIL",
+        "POWERING_UP",
+        "MAINTENANCE",
+        "REBOOT_REQUESTED",
+        "REBOOT_CANCELED",
+        "POWERING_DOWN",
+        "DYNAMIC_FUTURE",
+        "REBOOT_ISSUED",
+        "PLANNED",
+        "INVALID_REG",
+        "POWER_DOWN",
+        "POWER_UP",
+        "POWER_DRAIN",
+        "DYNAMIC_NORM"
+      ],
+      "address": "gx01",
+      "hostname": "gx01",
+      "state": [
+        "ALLOCATED"
+      ],
+      "operating_system": "Linux 5.4.0-195-generic #215-Ubuntu SMP Fri Aug 2 18:28:05 UTC 2024",
+      "owner": "",
+      "partitions": [
+        "sorcery",
+        "jinx"
+      ],
+      "port": 6818,
+      "real_memory": 1031880,
+      "comment": "",
+      "reason": "",
+      "reason_changed_at": 0,
+      "reason_set_by_user": "",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 696320,
+      "alloc_cpus": 40,
+      "alloc_idle_cpus": 216,
+      "tres_used": "cpu=40,mem=680G,gres\/gpu=7,gres\/gpu:a100=7",
+      "tres_weighted": 40.0,
+      "slurmd_start_time": 1726047514,
+      "sockets": 2,
+      "threads": 2,
+      "temporary_disk": 14155780,
+      "weight": 1,
+      "tres": "cpu=256,mem=1031880M,billing=16123,gres\/gpu=8,gres\/gpu:a100=8",
+      "version": "23.02.6"
+    },
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1717041020,
+      "cluster_name": "",
+      "cores": 24,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": {
+        "set": true,
+        "infinite": false,
+        "number": 286
+      },
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 358968
+      },
+      "cpus": 48,
+      "effective_cpus": 48,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+        "consumed_energy": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "temperature": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "energy_update_time": 0,
+        "current_watts": 0
+      },
+      "extra": "",
+      "power": {
+        "maximum_watts": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "current_watts": 0,
+        "total_energy": 0,
+        "new_maximum_watts": 0,
+        "peak_watts": 0,
+        "lowest_watts": 0,
+        "new_job_time": 0,
+        "state": 0,
+        "time_start_day": 0
+      },
+      "features": [
+        "g",
+        "x",
+        "VND:DELL",
+        "ARCH:X86",
+        "CPU_MNF:AMD",
+        "CPU_PROD:EPYC",
+        "CPU_GEN:MILAN",
+        "CPU_SKU:7413",
+        "CPU_FRQ:2.20GHz",
+        "CPU_EXT:AVX2",
+        "GPU_SKU:A100",
+        "GPU_MEM:40GB",
+        "GPU_CC:8.0",
+        "GPU_GEN:AMPERE",
+        "IB:HDR",
+        "IB:DUALRAIL",
+        "ETH:25G"
+      ],
+      "active_features": [
+        "g",
+        "x",
+        "VND:DELL",
+        "ARCH:X86",
+        "CPU_MNF:AMD",
+        "CPU_PROD:EPYC",
+        "CPU_GEN:MILAN",
+        "CPU_SKU:7413",
+        "CPU_FRQ:2.20GHz",
+        "CPU_EXT:AVX2",
+        "GPU_SKU:A100",
+        "GPU_MEM:40GB",
+        "GPU_CC:8.0",
+        "GPU_GEN:AMPERE",
+        "IB:HDR",
+        "IB:DUALRAIL",
+        "ETH:25G"
+      ],
+      "gres": "gpu:a100:2(S:0-1)",
+      "gres_drained": "N\/A",
+      "gres_used": "gpu:a100:2(IDX:0-1),mps:0",
+      "last_busy": 1729800931,
+      "mcs_label": "",
+      "specialized_memory": 16384,
+      "name": "gx03",
+      "next_state_after_reboot": [
+        "INVALID",
+        "PERFCTRS",
+        "RESERVED",
+        "UNDRAIN",
+        "CLOUD",
+        "RESUME",
+        "DRAIN",
+        "COMPLETING",
+        "NOT_RESPONDING",
+        "POWERED_DOWN",
+        "FAIL",
+        "POWERING_UP",
+        "MAINTENANCE",
+        "REBOOT_REQUESTED",
+        "REBOOT_CANCELED",
+        "POWERING_DOWN",
+        "DYNAMIC_FUTURE",
+        "REBOOT_ISSUED",
+        "PLANNED",
+        "INVALID_REG",
+        "POWER_DOWN",
+        "POWER_UP",
+        "POWER_DRAIN",
+        "DYNAMIC_NORM"
+      ],
+      "address": "gx03",
+      "hostname": "gx03",
+      "state": [
+        "ALLOCATED"
+      ],
+      "operating_system": "Linux 5.4.0-122-generic #138-Ubuntu SMP Wed Jun 22 15:00:31 UTC 2022",
+      "owner": "",
+      "partitions": [
+        "sorcery",
+        "jinx"
+      ],
+      "port": 6818,
+      "real_memory": 512000,
+      "comment": "",
+      "reason": "",
+      "reason_changed_at": 0,
+      "reason_set_by_user": "",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 249600,
+      "alloc_cpus": 22,
+      "alloc_idle_cpus": 26,
+      "tres_used": "cpu=22,mem=249600M,gres\/gpu=2,gres\/gpu:a100=2",
+      "tres_weighted": 22.0,
+      "slurmd_start_time": 1722253258,
+      "sockets": 2,
+      "threads": 1,
+      "temporary_disk": 1700000,
+      "weight": 1,
+      "tres": "cpu=48,mem=500G,billing=8000,gres\/gpu=2,gres\/gpu:a100=2",
+      "version": "23.02.6"
+    }
+  ],
+  "warnings": [
+  ],
+  "errors": [
+  ]
+}

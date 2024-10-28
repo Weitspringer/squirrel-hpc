@@ -1,5 +1,7 @@
 """
 Spatial Shifting vs. FIFO
+
+CPU Workload
 """
 
 from pathlib import Path
@@ -49,7 +51,7 @@ CLUSTER_PATH = Path("src") / "sim" / "data" / "3-node-cluster.json"
 # TDP configuration.
 META_PATH = Path("src") / "sim" / "data" / "3-node-meta.cfg"
 # Define where results will be stored.
-RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "vs-fifo"
+RESULT_DIR = Config.get_local_paths()["viz_path"] / "scenarios" / "spatial" / "cpu-fifo"
 
 
 ### Experiment execution ###
@@ -66,7 +68,7 @@ def run():
         cluster_path=CLUSTER_PATH,
         result_dir=RESULT_DIR,
         strat_1=CarbonAgnosticFifo(),
-        strat_2=SpatialShifting(meta_path=META_PATH),
+        strat_2=SpatialShifting(balance_grade=4, meta_path=META_PATH),
         forecasting=False,
     )
 

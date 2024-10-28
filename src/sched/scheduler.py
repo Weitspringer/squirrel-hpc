@@ -275,17 +275,24 @@ class SpatialGreedyShifting(PlanningStrategy):
         # Initialize dictionaries and lists to categorize nodes:
         # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
         # 'blackbox' will store nodes without TDP information.
-        cpu_tdp_box = {}
+        tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
-            if cpu_tdp is not None:
-                cpu_tdp_box.update({node: cpu_tdp})
+            if uses_gpu:
+                # TODO: Fix retrieval later
+                tdp = (
+                    get_gpu_tdp(node_name=node, meta_info=self._node_meta)
+                    + get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+                ) / 2
+            else:
+                tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+            if tdp is not None:
+                tdp_box.update({node: tdp})
             else:
                 blackbox.append(node)
 
         # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
-        sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
+        sorted_nodes = sorted(tdp_box.items(), key=lambda x: x[1])
         # Try to allocate resources greedy for "best" node
         for _, (node, _) in enumerate(sorted_nodes):
             for start_hour in range(0, len(timeslots) - hours + 1):
@@ -324,6 +331,10 @@ class SpatialShifting(PlanningStrategy):
     and circumvent node starvation.
     """
 
+    def __init__(self, balance_grade: int, meta_path: Path = None):
+        super(self.__class__, self).__init__(meta_path)
+        self.balance_grade = balance_grade
+
     def allocate_resources(
         self,
         job_id: str,
@@ -344,7 +355,11 @@ class SpatialShifting(PlanningStrategy):
         blackbox = []
         for node in nodes:
             if uses_gpu:
-                tdp = get_gpu_tdp(node_name=node, meta_info=self._node_meta)
+                # TODO: Fix retrieval later
+                tdp = (
+                    get_gpu_tdp(node_name=node, meta_info=self._node_meta)
+                    + get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+                ) / 2
             else:
                 tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
             if tdp is not None:
@@ -359,7 +374,6 @@ class SpatialShifting(PlanningStrategy):
         hour_marker = 0  # Tracks the starting hour for the current pool.
 
         # Create pools of nodes based on the difference in their TDP values.
-        balance_grade = 5  # Higher value leads to closer hour markers
         for i, (node, tdp) in enumerate(sorted_nodes):
             # Add the current node to the pool.
             curr_pool.append(node)
@@ -368,7 +382,9 @@ class SpatialShifting(PlanningStrategy):
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
                 if distance_next_tdp != 0:
                     # Calculate the next hour marker based on the TDP difference.
-                    next_marker = hour_marker + int(distance_next_tdp / balance_grade)
+                    next_marker = hour_marker + int(
+                        distance_next_tdp / self.balance_grade
+                    )
                     # Adjust the hour marker if it exceeds the available timeslots.
                     if not hour_marker <= len(timeslots) - hours:
                         # Ensure marker is within bounds.
