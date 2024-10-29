@@ -47,7 +47,7 @@ def _sim_schedule(
     cluster_pue: float,
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
-    Returns scheduling footprint and average job delay.
+    Returns scheduling footprint and mean job delay.
     """
     # Create scheduler
     scheduler = Scheduler(
@@ -89,7 +89,7 @@ def _sim_schedule(
                 )
     for job in jobs:
         job.power_draw_rc = 0
-    return footprint, np.average(delays)
+    return footprint, np.mean(delays)
 
 
 def _sim_schedule_forecasted(
@@ -102,7 +102,7 @@ def _sim_schedule_forecasted(
 ) -> tuple[float, float]:
     """Schedule a job set, all with the same submit date.
     The GCI is not set from history, but forecasted.
-    Returns scheduling footprint and average job delay.
+    Returns scheduling footprint and mean job delay.
     """
     # Create scheduler
     scheduler = Scheduler(
@@ -147,7 +147,7 @@ def _sim_schedule_forecasted(
                 )
     for job in jobs:
         job.power_draw_rc = 0
-    return footprint, np.average(delays)
+    return footprint, np.mean(delays)
 
 
 def _compare(
@@ -307,6 +307,17 @@ def plot(
     """Visualize scenario results."""
     # pylint: disable=anomalous-backslash-in-string
 
+    small_size = 10
+    medium_size = 12
+    bigger_size = 14
+    plt.rc("font", size=small_size)  # controls default text sizes
+    plt.rc("axes", titlesize=medium_size)  # fontsize of the axes title
+    plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=medium_size)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=medium_size)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=medium_size)  # legend fontsize
+    plt.rc("figure", titlesize=small_size)  # fontsize of the figure title
+
     ### Load result data
     data_dir = result_dir / "data"
     result_df = pd.read_csv(data_dir / "results.csv")
@@ -352,16 +363,16 @@ def plot(
             "delay_benchmark"
         ].to_list()
         benchmark_delays_hourly = list(
-            np.ma.average(np.reshape(benchmark_delays, (days, 24)), axis=0)
+            np.ma.mean(np.reshape(benchmark_delays, (days, 24)), axis=0)
         )
         # Stats
         min_sav_rel = round(np.min(relative_savings), 4)
         max_sav_rel = round(np.max(relative_savings), 4)
-        avg_sav_rel = round(np.average(relative_savings), 4)
+        avg_sav_rel = round(np.mean(relative_savings), 4)
         min_sav_abs = round(np.min(absolute_savings), 4)
         max_sav_abs = round(np.max(absolute_savings), 4)
-        avg_sav_abs = round(np.average(absolute_savings), 4)
-        avg_del = round(np.average(benchmark_delays_hourly), 4)
+        avg_sav_abs = round(np.mean(absolute_savings), 4)
+        avg_del = round(np.mean(benchmark_delays_hourly), 4)
         utc_shift = utc_shifts.get(zone)
         stats.append(
             {
@@ -377,13 +388,13 @@ def plot(
             }
         )
         savings_hourly_avg = list(
-            np.ma.average(
+            np.ma.mean(
                 relative_savings.reshape((days, 24)),
                 axis=0,
             )
         )
         savings_hourly_absolute_avg = list(
-            np.ma.average(absolute_savings.reshape((days, 24)), axis=0)
+            np.ma.mean(absolute_savings.reshape((days, 24)), axis=0)
         )
         # Normalize to local time
         hours = []
@@ -410,11 +421,9 @@ def plot(
         res_relative.update({zone: savings_hourly_avg})
         res_absolute.update({zone: savings_hourly_absolute_avg})
         res_delay.update({zone: benchmark_delays_hourly})
-        res_avg_rel.update(
-            {zone: (np.average(savings_hourly_avg), zone_colors.get(zone))}
-        )
+        res_avg_rel.update({zone: (np.mean(savings_hourly_avg), zone_colors.get(zone))})
 
-    ### AVERAGE RELATIVE SAVINGS
+    ### MEAN RELATIVE SAVINGS
     res_avg_rel_sorted = dict(
         sorted(res_avg_rel.items(), key=lambda item: item[1][0], reverse=True)
     )
@@ -454,11 +463,12 @@ def plot(
             linewidth=2,
             alpha=0.7,
         )
-    plt.locator_params(axis="x", nbins=24)
+    plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
-    plt.ylabel("Average Job Delay")
+    plt.ylabel("Mean Job Delay")
     plt.ylim(0, 24)
-    plt.xlabel("Hour of Day (localized)")
+    plt.xlabel("Workload Submission Time")
+    plt.xlim(0, 23.9)
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dh"))
     plt.grid(axis="y", linewidth=1, alpha=0.2)
     plt.grid(axis="x", linewidth=1, alpha=0.2)
@@ -482,10 +492,11 @@ def plot(
             color=zone_colors.get(zone),
             linewidth=2,
         )
-    plt.locator_params(axis="x", nbins=24)
+    plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
-    plt.ylabel("Average $\mathregular{CO_2}$-eq. Saved")
-    plt.xlabel("Hour of Day (localized)")
+    plt.ylabel("Mean $\mathregular{CO_2}$-eq. Saved")
+    plt.xlabel("Workload Submission Time")
+    plt.xlim(0, 23.9)
     if min_v < 0:
         h_lim = min_v - 10
         plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
@@ -516,19 +527,20 @@ def plot(
             color=zone_colors.get(zone),
             linewidth=2,
         )
-    plt.locator_params(axis="x", nbins=24)
+    plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
-    plt.ylabel("Average g$\mathregular{CO_2}$-eq. Saved")
+    plt.ylabel("Mean g$\mathregular{CO_2}$-eq. Saved")
     if min_v < 0:
         h_lim = min_v - 1
         plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
-    if max_v < 40:
-        max_v = 40
+    if max_v < 45:
+        max_v = 45
     else:
         max_v += 2
     plt.ylim(h_lim, max_v)
-    plt.xlabel("Hour of Day (localized)")
+    plt.xlabel("Workload Submission Time")
+    plt.xlim(0, 23.99)
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=1, alpha=0.3)
     plt.grid(axis="x", linewidth=1, alpha=0.3)
@@ -573,7 +585,7 @@ def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
             options=influx_options,
         )
         gci_hourly = list(
-            np.ma.average(np.reshape(gci_data["gci"].to_list(), (365, 24)), axis=0)
+            np.ma.mean(np.reshape(gci_data["gci"].to_list(), (365, 24)), axis=0)
         )
         # Localize time
         utc_shift = utc_shifts.get(zone)
@@ -592,10 +604,11 @@ def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
             upper = gci_hourly[:min_index]
             gci_hourly = lower + upper
         plt.plot(hours, gci_hourly, color=zone_colors.get(zone), label=zone)
-    plt.locator_params(axis="x", nbins=24)
+    plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
-    plt.xlabel("Hour of Day (localized)")
-    plt.ylabel("Average $\mathregular{CO_2}$-eq.")
+    plt.xlabel("Workload Submission Time")
+    plt.xlim(0, 23.99)
+    plt.ylabel("Mean $\mathregular{CO_2}$-eq.")
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=1, alpha=0.3)
