@@ -29,7 +29,7 @@ DAYS = 364
 # Define workloads which need to be scheduled for each iteration.
 JOBS = []
 
-for i in range(12):
+for i in range(8):
     JOBS.append(
         JobSubmission(
             job_id=f"tpcxai-sf1_[{i}]",
