@@ -73,7 +73,7 @@ def run():
         cluster_path=CLUSTER_PATH,
         result_dir=RESULT_DIR,
         strat_1=TemporalShifting(),
-        strat_2=SpatiotemporalShifting(switch_threshold=0.75, meta_path=META_PATH),
+        strat_2=SpatiotemporalShifting(switch_threshold=0.54, meta_path=META_PATH),
         forecasting=False,
     )
 
