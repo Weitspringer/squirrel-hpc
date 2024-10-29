@@ -443,11 +443,12 @@ def plot(
     if min_v < 0:
         plt.axhspan(0, min_v, color="tab:red", alpha=0.1, zorder=-100)
         h_lim = min_v - 2
-    if max_v < 30:
-        max_v = 30
+    if max_v < 35:
+        max_v = 35
     plt.ylim(h_lim, max_v)
     plt.ylabel("g$\mathregular{CO_2}$-eq. Savings")
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
+    plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=5))
     plt.grid(axis="y", linewidth=1, alpha=0.5)
     plt.tight_layout()
     plt.savefig(result_dir / "avg-savings-relative.pdf")
@@ -466,6 +467,7 @@ def plot(
     plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
     plt.ylabel("Mean Job Delay")
+    plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=2))
     plt.ylim(0, 24)
     plt.xlabel("Workload Submission Time")
     plt.xlim(0, 23.9)
@@ -503,6 +505,7 @@ def plot(
     max_v += 10
     plt.ylim(h_lim, max_v)
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
+    plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=50))
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     # plt.yscale("symlog", base=10)
     plt.grid(axis="y", linewidth=1, alpha=0.3)
@@ -530,6 +533,7 @@ def plot(
     plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
+    plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=10))
     plt.ylabel("Mean g$\mathregular{CO_2}$-eq. Saved")
     if min_v < 0:
         h_lim = min_v - 1
