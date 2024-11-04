@@ -607,12 +607,14 @@ def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
             lower = gci_hourly[min_index:]
             upper = gci_hourly[:min_index]
             gci_hourly = lower + upper
-        plt.plot(hours, gci_hourly, color=zone_colors.get(zone), label=zone)
+        plt.plot(
+            hours, gci_hourly, color=zone_colors.get(zone), label=zone, linewidth=2
+        )
     plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
-    plt.xlabel("Workload Submission Time")
+    plt.xlabel("Day Hour")
     plt.xlim(0, 23.99)
-    plt.ylabel("Mean $\mathregular{CO_2}$-eq.")
+    plt.ylabel("Mean g$\mathregular{CO_2}$e/kWh")
     plt.gca().yaxis.set_major_formatter(ticker.FormatStrFormatter("%dg"))
     plt.legend(loc="upper center", bbox_to_anchor=(0.5, 1.15), ncol=len(zones))
     plt.grid(axis="y", linewidth=1, alpha=0.3)
