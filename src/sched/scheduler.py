@@ -546,13 +546,12 @@ class SpatiotemporalShifting(PlanningStrategy):
                     )
                     if reserved_ts:
                         return window, node
-            for _, window in sorted(weighted_windows.items()):
-                for node in blackbox:
-                    reserved_ts = _reserve_resources(
-                        job_id=job_id, window=window, node=node
-                    )
-                    if reserved_ts:
-                        return window, node
+            for node in blackbox:
+                reserved_ts = _reserve_resources(
+                    job_id=job_id, window=window, node=node
+                )
+                if reserved_ts:
+                    return window, node
         return None, None
 
 
