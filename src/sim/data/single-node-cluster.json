@@ -1,73 +1,190 @@
 {
-    "meta": {
-      "plugin": {
-        "type": "openapi\/v0.0.38",
-        "name": "Slurm OpenAPI v0.0.38"
-      },
-      "Slurm": {
-        "version": {
-          "major": 21,
-          "micro": 1,
-          "minor": 2
-        },
-        "release": "21.01.2"
-      }
+  "meta": {
+    "plugins": {
+      "data_parser": "data_parser\/v0.0.39",
+      "accounting_storage": "accounting_storage\/slurmdbd"
     },
-    "errors": [
+    "command": [
+      "show",
+      "node",
+      "cx01"
     ],
-    "nodes": [
-      {
-        "architecture": "aarch64",
-        "burstbuffer_network_address": "",
-        "boards": 1,
-        "boot_time": 1717664566,
-        "comment": "",
-        "cores": 12,
-        "cpu_binding": 0,
-        "cpu_load": 0,
-        "extra": "",
-        "free_memory": 18677,
-        "cpus": 48,
-        "last_busy": 1721833015,
-        "features": "c,a,VND:HPE,ARCH:ARM,CPU_MFN:FTS,CPU_PROD:A64FX,CPU_GEN:ARMv8,CPU_SKU:A64FX,CPU_FRQ:1.80GHz,CPU_EXT:SVE,IB:EDR,ETH:1G",
-        "active_features": "c,a,VND:HPE,ARCH:ARM,CPU_MFN:FTS,CPU_PROD:A64FX,CPU_GEN:ARMv8,CPU_SKU:A64FX,CPU_FRQ:1.80GHz,CPU_EXT:SVE,IB:EDR,ETH:1G",
-        "gres": "",
-        "gres_drained": "N\/A",
-        "gres_used": "gpu:0,mps:0",
-        "mcs_label": "",
-        "name": "c1",
-        "next_state_after_reboot": "invalid",
-        "address": "c1",
-        "hostname": "c1",
-        "state": "idle",
-        "state_flags": [
-        ],
-        "next_state_after_reboot_flags": [
-        ],
-        "operating_system": "Linux 4.18.0-240.el8.aarch64 #1 SMP Wed Sep 23 05:09:38 EDT 2020",
-        "owner": null,
-        "partitions": [
-          "abra",
-          "kadabra",
-          "admin"
-        ],
-        "port": 6820,
-        "real_memory": 32587,
-        "reason": "",
-        "reason_changed_at": 0,
-        "reason_set_by_user": null,
-        "slurmd_start_time": 1718189359,
-        "sockets": 4,
-        "threads": 1,
-        "temporary_disk": 20470,
-        "weight": 1,
-        "tres": "cpu=48,mem=32587M,billing=3000",
-        "slurmd_version": "21.01.2",
-        "alloc_memory": 0,
-        "alloc_cpus": 0,
-        "idle_cpus": 48,
-        "tres_used": null,
-        "tres_weighted": 0.0
-      }
-    ]
+    "Slurm": {
+      "version": {
+        "major": 23,
+        "micro": 6,
+        "minor": 2
+      },
+      "release": "23.02.6"
+    }
+  },
+  "nodes": [
+    {
+      "architecture": "x86_64",
+      "burstbuffer_network_address": "",
+      "boards": 1,
+      "boot_time": 1727330726,
+      "cluster_name": "",
+      "cores": 18,
+      "specialized_cores": 0,
+      "cpu_binding": 0,
+      "cpu_load": {
+        "set": true,
+        "infinite": false,
+        "number": 4
+      },
+      "free_mem": {
+        "set": true,
+        "infinite": false,
+        "number": 175616
+      },
+      "cpus": 72,
+      "effective_cpus": 72,
+      "specialized_cpus": "",
+      "energy": {
+        "average_watts": 0,
+        "base_consumed_energy": 0,
+        "consumed_energy": 0,
+        "current_watts": {
+          "set": true,
+          "infinite": false,
+          "number": 0
+        },
+        "previous_consumed_energy": 0,
+        "last_collected": 0
+      },
+      "external_sensors": {
+        "consumed_energy": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "temperature": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "energy_update_time": 0,
+        "current_watts": 0
+      },
+      "extra": "",
+      "power": {
+        "maximum_watts": {
+          "set": false,
+          "infinite": false,
+          "number": 0
+        },
+        "current_watts": 0,
+        "total_energy": 0,
+        "new_maximum_watts": 0,
+        "peak_watts": 0,
+        "lowest_watts": 0,
+        "new_job_time": 0,
+        "state": 0,
+        "time_start_day": 0
+      },
+      "features": [
+        "c",
+        "x",
+        "VND:FTS",
+        "ARCH:X86",
+        "CPU_MNF:INTEL",
+        "CPU_PROD:XEON",
+        "CPU_GEN:CSL",
+        "CPU_SKU:5220S",
+        "CPU_FRQ:2.70GHz",
+        "CPU_EXT:AVX2",
+        "CPU_EXT:AVX-512",
+        "IB:EDR",
+        "ETH:25G"
+      ],
+      "active_features": [
+        "c",
+        "x",
+        "VND:FTS",
+        "ARCH:X86",
+        "CPU_MNF:INTEL",
+        "CPU_PROD:XEON",
+        "CPU_GEN:CSL",
+        "CPU_SKU:5220S",
+        "CPU_FRQ:2.70GHz",
+        "CPU_EXT:AVX2",
+        "CPU_EXT:AVX-512",
+        "IB:EDR",
+        "ETH:25G"
+      ],
+      "gres": "",
+      "gres_drained": "N\/A",
+      "gres_used": "gpu:0,mps:0",
+      "last_busy": 1729790216,
+      "mcs_label": "",
+      "specialized_memory": 16384,
+      "name": "cx01",
+      "next_state_after_reboot": [
+        "INVALID",
+        "PERFCTRS",
+        "RESERVED",
+        "UNDRAIN",
+        "CLOUD",
+        "RESUME",
+        "DRAIN",
+        "COMPLETING",
+        "NOT_RESPONDING",
+        "POWERED_DOWN",
+        "FAIL",
+        "POWERING_UP",
+        "MAINTENANCE",
+        "REBOOT_REQUESTED",
+        "REBOOT_CANCELED",
+        "POWERING_DOWN",
+        "DYNAMIC_FUTURE",
+        "REBOOT_ISSUED",
+        "PLANNED",
+        "INVALID_REG",
+        "POWER_DOWN",
+        "POWER_UP",
+        "POWER_DRAIN",
+        "DYNAMIC_NORM"
+      ],
+      "address": "cx01",
+      "hostname": "cx01",
+      "state": [
+        "IDLE"
+      ],
+      "operating_system": "Linux 5.4.0-170-generic #188-Ubuntu SMP Wed Jan 10 09:51:01 UTC 2024",
+      "owner": "",
+      "partitions": [
+        "magic",
+        "jinx"
+      ],
+      "port": 6818,
+      "real_memory": 190474,
+      "comment": "",
+      "reason": "",
+      "reason_changed_at": 0,
+      "reason_set_by_user": "",
+      "resume_after": {
+        "set": true,
+        "infinite": false,
+        "number": 0
+      },
+      "reservation": "",
+      "alloc_memory": 0,
+      "alloc_cpus": 0,
+      "alloc_idle_cpus": 72,
+      "tres_used": "",
+      "tres_weighted": 0.0,
+      "slurmd_start_time": 1727330750,
+      "sockets": 2,
+      "threads": 2,
+      "temporary_disk": 20470,
+      "weight": 1,
+      "tres": "cpu=72,mem=190474M,billing=4500",
+      "version": "23.02.6"
+    }
+  ],
+  "warnings": [
+  ],
+  "errors": [
+  ]
 }

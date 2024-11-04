@@ -23,13 +23,12 @@ def ingest_emaps_history(path_to_csv: Path):
     zone_ids = df_mapped["zone"].unique()
     assert len(zone_ids) == 1
     influx_opt.get("tags").update({"zone": zone_ids[0]})
-    df_mapped.loc[:, "time"] = df_mapped["time"].apply(lambda x: _transform_datestr(x))
+    df_mapped.loc[:, "time"] = df_mapped["time"].apply(_transform_datestr)
     _write_data_from_df(
         data=df_mapped, options=influx_opt, value_column="gci", time_column="time"
     )
 
 
 def _transform_datestr(datestr: str):
-    x_dt = datetime.fromisoformat(datestr)
-    x_dt = x_dt.astimezone(tz=UTC)
+    x_dt = datetime.fromisoformat(datestr)  # Date is in UTC
     return x_dt.isoformat(timespec="microseconds")

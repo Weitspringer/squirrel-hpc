@@ -10,7 +10,7 @@ from pathlib import Path
 from subprocess import call, PIPE, check_output
 from typing import Any
 
-from src.config.cluster_info import Config as AdditionalInfo
+from src.config.cluster_info import NodesMeta
 
 
 def sbatch(suffix: str) -> str:
@@ -28,13 +28,18 @@ def sbatch(suffix: str) -> str:
 
 
 def read_sinfo(path_to_json: Path | None = None) -> dict:
-    """Parses the output of 'sinfo --json'."""
+    """Parses the output of 'scontrol show node --json'."""
     if path_to_json is None:
-        cmd = ["sinfo", "--json"]
+        cmd = ["scontrol", "show", "node", "--json"]
         out = check_output(cmd).decode()
     else:
         out = path_to_json.read_text()
-    return loads(out)
+    j_data = loads(out)
+    if "nodes" not in j_data.keys():
+        raise ValueError(
+            "Unknown format of cluster configuration. Needs 'nodes' section."
+        )
+    return j_data
 
 
 def get_nodes(path_to_json: Path | None = None) -> list[dict[str, Any]]:
@@ -42,22 +47,22 @@ def get_nodes(path_to_json: Path | None = None) -> list[dict[str, Any]]:
     return read_sinfo(path_to_json=path_to_json).get("nodes")
 
 
-def get_cpu_tdp(hostname: str) -> int | None:
+def get_cpu_tdp(node_name: str, meta_info: NodesMeta) -> int | None:
     """Get thermal design power (TDP) of a node's CPUs.
-    The node is defined by its hostname.
+    The node is defined by its name.
 
     If TDP was not provided, returns None.
     """
-    return AdditionalInfo.get_cpu_tdp(node=hostname)
+    return meta_info.get_cpu_tdp(node=node_name)
 
 
-def get_gpu_tdp(hostname: str) -> int | None:
+def get_gpu_tdp(node_name: str, meta_info: NodesMeta) -> int | None:
     """Get thermal design power (TDP) of a node's GPUs.
-    The node is defined by its hostname.
+    The node is defined by its name.
 
     If TDP was not provided, returns None.
     """
-    return AdditionalInfo.get_gpu_tdp(node=hostname)
+    return meta_info.get_gpu_tdp(node=node_name)
 
 
 def get_partitions(path_to_json: Path | None = None) -> dict[str, dict[str, Any]]:

@@ -24,7 +24,6 @@ ZONE_LABELS = {
     "NO": "Norway",
     "PL": "Poland",
     "SE": "Sweden",
-    "SE-SE4": "South Sweden",
     "TW": "Taiwan",
     "US-MIDA-PJM": "USA (PJM)",
     "ZA": "South Africa",
@@ -36,9 +35,6 @@ plt.style.use("seaborn-v0_8")
 
 
 def analyze(zones: list[str]) -> None:
-    cm = plt.get_cmap("tab20")
-    ax = plt.gca()
-    ax.set_prop_cycle(color=[cm(1.0 * i / len(zones)) for i in range(len(zones))])
     stats = []
     for zone in zones:
         start = datetime.fromisoformat(f"{YEAR}-01-01T00:00:00+00:00")
@@ -48,28 +44,72 @@ def analyze(zones: list[str]) -> None:
         gci_hist = get_gci_data(start=start, stop=end, options=influx_options)
         gci_hist["Month"] = gci_hist["time"].apply(lambda x: x.month)
         gci_hist = gci_hist.set_index("time")
-        avg_gci = np.average(gci_hist["gci"])
-        cv = np.std(gci_hist["gci"]) / np.mean(gci_hist["gci"])
-        plt.plot(avg_gci, cv, "o", label=ZONE_LABELS[zone])
+        day_cvs = []
+        day_avg = []
+        try:
+            gci_daily = np.asarray(gci_hist["gci"].tolist()).reshape((365, 24))
+            for gci_day in gci_daily:
+                day_avg.append(np.mean(gci_hist))
+                day_cvs.append(np.std(gci_day) / np.mean(gci_day))
+        except ValueError:
+            print(f"Zone has not enough data: {zone}")
+            continue
+        avg_annually = np.mean(gci_hist["gci"])
+        cv_annually = np.std(gci_hist["gci"]) / np.mean(gci_hist["gci"])
+        avg_daily = np.median(day_avg)
+        cv_daily = np.median(day_cvs)
         # Write stats
         stats.append(
             {
                 "zone": zone,
-                "gci_cv": cv,
-                "gci_average": avg_gci,
+                "gci_average_anually": avg_annually,
+                "gci_average_daily": avg_daily,
+                "gci_cv_anually": cv_annually,
+                "gci_cv_daily": cv_daily,
                 "num_points": len(gci_hist),
             }
         )
-    plt.title("Properties of GCI time series in different zones, 2023")
-    plt.xlabel("Average grid carbon intensity [gCO2-eq./kWh]")
-    plt.ylabel("Coefficient of variation")
-    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
-    plt.tight_layout(pad=1)
-    plt.savefig(RESULT_DIR / f"gci_in_zones.pdf")
-    # Write stats
     stat_df = pd.DataFrame(stats)
     stat_df.set_index("zone", inplace=True)
-    stat_df.to_csv(RESULT_DIR / f"gci_in_zones_stats.csv")
+    cm = plt.get_cmap("tab20")
+    ax = plt.gca()
+    ax.set_prop_cycle(color=[cm(1.0 * i / len(zones)) for i in range(len(zones))])
+    for zone, stat in stat_df.iterrows():
+        plt.plot(
+            stat["gci_average_anually"],
+            stat["gci_cv_anually"],
+            "o",
+            label=ZONE_LABELS[zone],
+            markersize=10,
+        )
+    plt.title(
+        "[Annually] Properties of GCI Time Series in different Energy Zones, 2023"
+    )
+    plt.xlabel("Average [gCO2e/kWh]")
+    plt.ylabel("Coefficient of Variation")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.tight_layout(pad=1)
+    plt.savefig(RESULT_DIR / "gci_in_zones_annually.pdf")
+    plt.clf()
+    cm = plt.get_cmap("tab20")
+    ax = plt.gca()
+    ax.set_prop_cycle(color=[cm(1.0 * i / len(zones)) for i in range(len(zones))])
+    for zone, stat in stat_df.iterrows():
+        plt.plot(
+            stat["gci_average_daily"],
+            stat["gci_cv_daily"],
+            "o",
+            label=ZONE_LABELS[zone],
+            markersize=10,
+        )
+    plt.title("[Daily] Properties of GCI Time Series in different Energy Zones, 2023")
+    plt.xlabel("Average [gCO2e/kWh]")
+    plt.ylabel("Coefficient of Variation")
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
+    plt.tight_layout(pad=1)
+    plt.savefig(RESULT_DIR / "gci_in_zones_daily.pdf")
+    # Write stats
+    stat_df.to_csv(RESULT_DIR / "gci_in_zones_stats.csv")
 
 
 if __name__ == "__main__":

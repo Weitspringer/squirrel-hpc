@@ -1,3 +1,5 @@
+"""Scheduling logic implementation for multiple schedulers."""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -5,12 +7,13 @@ from functools import reduce
 from pathlib import Path
 
 from src.cluster.commons import get_partitions, get_cpu_tdp, get_gpu_tdp
+from src.config.cluster_info import Meta, NodesMeta
 from src.errors.scheduling import (
     NoWindowAllocatedException,
     NoSuitableNodeException,
     JobTooLongException,
 )
-from .timetable import Timetable, ConstrainedTimeslot
+from src.sched.timetable import Timetable, ConstrainedTimeslot
 
 
 class Scheduler:
@@ -19,7 +22,11 @@ class Scheduler:
     Strategy pattern.
     """
 
-    def __init__(self, strategy: PlanningStrategy, cluster_info: Path = None) -> None:
+    def __init__(
+        self,
+        strategy: PlanningStrategy,
+        cluster_info: Path = None,
+    ) -> None:
         """
         The scheduler accepts a strategy through the constructor, but
         also provides a setter to change it at runtime.
@@ -60,7 +67,7 @@ class Scheduler:
         r_window = None
         uses_gpu = num_gpus is not None
         if hours <= len(timetable.timeslots):
-            nodes = self._get_nodeset(
+            nodes = self._get_nodes(
                 partitions=partitions, num_gpus=num_gpus, gpu_name=gpu_name
             )
             if len(nodes) == 0:
@@ -76,30 +83,47 @@ class Scheduler:
             )
         else:
             raise JobTooLongException(
-                f"You requested {hours} hours. The maximum amount is {len(timetable.timeslots)} hours."
+                f"You requested {hours} hours. "
+                "The maximum amount is {len(timetable.timeslots)} hours."
             )
         if not r_window:
             raise NoWindowAllocatedException("The schedule is full.")
         return r_window[0].start, r_node
 
-    def _get_nodeset(
+    def _get_nodes(
         self,
         partitions: list[str],
         num_gpus: int | None = None,
         gpu_name: str | None = None,
     ) -> list[str]:
         # Get suitable nodes based on partitions and requested GPUs
+        # Sort with regards to their weight and name.
         cluster = get_partitions(path_to_json=self._cluster_info)
-        nodes = set()
+        nodeset = set()
+        weighted_nodes = {}
         for partition, p_nodes in cluster.items():
             # Filter partitions
             if partition in partitions:
                 for p_node in p_nodes:
+                    p_name = p_node["name"]
+                    if p_name in nodeset:
+                        continue
+                    nodeset.add(p_name)
                     # Analyze generic resources of node
                     if not self._gres_matches(p_node["gres"], num_gpus, gpu_name):
                         continue
-                    nodes.add(p_node["hostname"])
-        return nodes
+                    weight = p_node["weight"]
+                    if weight not in weighted_nodes:
+                        weighted_nodes.update({weight: [p_name]})
+                    else:
+                        weighted_nodes.get(weight).append(p_name)
+        weighted_nodes = dict(sorted(weighted_nodes.items()))
+        # Sort after name in each weight group and accumulate
+        result = []
+        for _, value in weighted_nodes.items():
+            value = sorted(value)
+            result = result + value
+        return result
 
     def _gres_matches(
         self, gres: str, num_gpus: int | None, gpu_name: str | None
@@ -136,6 +160,15 @@ class PlanningStrategy(ABC):
 
     # NOTE: Jobs are assumed to be non-interruptible.
 
+    def __init__(self, meta_path: Path = None):
+        if meta_path is None:
+            meta_info = Meta
+        elif meta_path.exists():
+            meta_info = NodesMeta(path=meta_path)
+        else:
+            raise ValueError("File does not exist:", meta_path.absolute())
+        self._node_meta = meta_info
+
     @abstractmethod
     def allocate_resources(
         self,
@@ -148,11 +181,14 @@ class PlanningStrategy(ABC):
         """Exclusively allocate nodes for consecutive window in the timetable.
         The length of the window is determined by the specified hours.
         """
-        pass
 
 
 class CarbonAgnosticFifo(PlanningStrategy):
-    """Carbon-agnostic first-in-first-out (fifo) scheduling strategy."""
+    """Carbon-agnostic first-in-first-out (fifo) scheduling strategy.
+
+    Approximates Slurm's behavior with default topology plugin.
+    Takes into account scheduling weight and node names.
+    """
 
     def allocate_resources(
         self,
@@ -167,8 +203,7 @@ class CarbonAgnosticFifo(PlanningStrategy):
         for start_hour in range(0, len(timeslots) - hours + 1):
             window = timeslots[start_hour : start_hour + hours]
             # Skip window if there is a full slot in it
-            full_slots = list(filter(lambda x: x.is_full(), window))
-            if len(full_slots) > 0:
+            if any(slot.is_full() for slot in window):
                 continue
             # Try to reserve a node within the window
             for node in nodes:
@@ -200,8 +235,7 @@ class TemporalShifting(PlanningStrategy):
             # Map-reduce to calculate weight of current window
             window = timeslots[start_hour : start_hour + hours]
             # Skip window if there is a full slot in it
-            full_slots = list(filter(lambda x: x.is_full(), window))
-            if len(full_slots) > 0:
+            if any(slot.is_full() for slot in window):
                 continue
             # Calculate weight of window
             window_gcis = list(map(lambda x: x.gci, window))
@@ -221,6 +255,8 @@ class TemporalShifting(PlanningStrategy):
 
 
 class SpatialGreedyShifting(PlanningStrategy):
+    """Greedily shift workloads towards nodes with low TDP values."""
+
     def allocate_resources(
         self,
         job_id: str,
@@ -235,27 +271,32 @@ class SpatialGreedyShifting(PlanningStrategy):
         timeslots = timetable.timeslots
 
         # Initialize dictionaries and lists to categorize nodes:
-        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
+        # 'tdp_box' will store nodes with their corresponding TDP values.
         # 'blackbox' will store nodes without TDP information.
-        cpu_tdp_box = {}
+        tdp_box = {}
         blackbox = []
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(hostname=node)
-            if cpu_tdp is not None:
-                cpu_tdp_box.update({node: cpu_tdp})
+            if uses_gpu:
+                # TODO: Fix retrieval later
+                tdp = (
+                    get_gpu_tdp(node_name=node, meta_info=self._node_meta)
+                    + get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+                ) / 2
+            else:
+                tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+            if tdp is not None:
+                tdp_box.update({node: tdp})
             else:
                 blackbox.append(node)
 
         # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
-        sorted_nodes = sorted(cpu_tdp_box.items(), key=lambda x: x[1])
+        sorted_nodes = sorted(tdp_box.items(), key=lambda x: x[1])
         # Try to allocate resources greedy for "best" node
-        for i in range(len(sorted_nodes)):
-            node, _ = sorted_nodes[i]
+        for _, (node, _) in enumerate(sorted_nodes):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = list(filter(lambda x: x.is_full(), window))
-                if len(full_slots) > 0:
+                if any(slot.is_full() for slot in window):
                     continue
                 reserved_ts = _reserve_resources(
                     job_id=job_id, window=window, node=node
@@ -268,8 +309,7 @@ class SpatialGreedyShifting(PlanningStrategy):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = list(filter(lambda x: x.is_full(), window))
-                if len(full_slots) > 0:
+                if any(slot.is_full() for slot in window):
                     continue
                 for node in blackbox:
                     reserved_ts = _reserve_resources(
@@ -282,6 +322,15 @@ class SpatialGreedyShifting(PlanningStrategy):
 
 
 class SpatialShifting(PlanningStrategy):
+    """Shift workloads towards nodes with low TDP values.
+    Balances more than SpatialGreedyShifting to lower delay
+    and circumvent node starvation.
+    """
+
+    def __init__(self, balance_grade: int, meta_path: Path = None):
+        super(self.__class__, self).__init__(meta_path)
+        self.balance_grade = balance_grade
+
     def allocate_resources(
         self,
         job_id: str,
@@ -302,9 +351,13 @@ class SpatialShifting(PlanningStrategy):
         blackbox = []
         for node in nodes:
             if uses_gpu:
-                tdp = get_gpu_tdp(hostname=node)
+                # TODO: Fix retrieval later
+                tdp = (
+                    get_gpu_tdp(node_name=node, meta_info=self._node_meta)
+                    + get_cpu_tdp(node_name=node, meta_info=self._node_meta)
+                ) / 2
             else:
-                tdp = get_cpu_tdp(hostname=node)
+                tdp = get_cpu_tdp(node_name=node, meta_info=self._node_meta)
             if tdp is not None:
                 tdp_box.update({node: tdp})
             else:
@@ -317,23 +370,41 @@ class SpatialShifting(PlanningStrategy):
         hour_marker = 0  # Tracks the starting hour for the current pool.
 
         # Create pools of nodes based on the difference in their TDP values.
-        for i in range(len(sorted_nodes)):
+        for i, (node, tdp) in enumerate(sorted_nodes):
             # Add the current node to the pool.
-            node, tdp = sorted_nodes[i]
             curr_pool.append(node)
             # Calculate the TDP difference to the next node.
             if i < len(sorted_nodes) - 1:
                 distance_next_tdp = sorted_nodes[i + 1][1] - tdp
-            # If the TDP difference is non-zero, create a new pool.
-            if distance_next_tdp != 0:
-                # Calculate the next hour marker based on the TDP difference.
-                next_marker = hour_marker + int(distance_next_tdp / 10)
+                if distance_next_tdp != 0:
+                    # Calculate the next hour marker based on the TDP difference.
+                    next_marker = hour_marker + int(
+                        distance_next_tdp / self.balance_grade
+                    )
+                    # Adjust the hour marker if it exceeds the available timeslots.
+                    if not hour_marker <= len(timeslots) - hours:
+                        # Ensure marker is within bounds.
+                        hour_marker = len(timeslots) - hours
+                        # Merge the current pool with any existing pool at the last marker.
+                        if hour_marker in load_balance_pools:
+                            prev_pool = load_balance_pools.get(len(timeslots) - hours)
+                            prev_pool += curr_pool
+                        else:
+                            load_balance_pools.update({hour_marker: curr_pool})
+                    else:
+                        # Otherwise, add the current pool to the load balance pools.
+                        load_balance_pools.update({hour_marker: curr_pool})
+                    # Move the hour marker forward and reset the current pool.
+                    hour_marker = next_marker
+                    curr_pool = []
+            else:
+                # We reached the last node
                 # Adjust the hour marker if it exceeds the available timeslots.
                 if not hour_marker <= len(timeslots) - hours:
                     # Ensure marker is within bounds.
                     hour_marker = len(timeslots) - hours
                     # Merge the current pool with any existing pool at the last marker.
-                    if hour_marker in load_balance_pools.keys():
+                    if hour_marker in load_balance_pools:
                         prev_pool = load_balance_pools.get(len(timeslots) - hours)
                         prev_pool += curr_pool
                     else:
@@ -341,9 +412,6 @@ class SpatialShifting(PlanningStrategy):
                 else:
                     # Otherwise, add the current pool to the load balance pools.
                     load_balance_pools.update({hour_marker: curr_pool})
-                # Move the hour marker forward and reset the current pool.
-                hour_marker = next_marker
-                curr_pool = []
 
         # Initialize the list of allocation pools to try and allocate resources from.
         alloc_pools = []
@@ -362,8 +430,7 @@ class SpatialShifting(PlanningStrategy):
             for start_hour in range(next_marker - 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = list(filter(lambda x: x.is_full(), window))
-                if len(full_slots) > 0:
+                if any(slot.is_full() for slot in window):
                     continue
                 # Try to reserve resources using the pools in order.
                 for pool in alloc_pools:
@@ -379,8 +446,7 @@ class SpatialShifting(PlanningStrategy):
             for start_hour in range(0, len(timeslots) - hours + 1):
                 window = timeslots[start_hour : start_hour + hours]
                 # Skip window if there is a full slot in it
-                full_slots = list(filter(lambda x: x.is_full(), window))
-                if len(full_slots) > 0:
+                if any(slot.is_full() for slot in window):
                     continue
                 for node in blackbox:
                     reserved_ts = _reserve_resources(
@@ -393,6 +459,14 @@ class SpatialShifting(PlanningStrategy):
 
 
 class SpatiotemporalShifting(PlanningStrategy):
+    """Combined spatiotemporal workload shifting with load-balancing windows.
+    Allocates workloads during low-GCI time slots and shifts toward nodes with lower TDP.
+    """
+
+    def __init__(self, switch_threshold: float = 0.75, meta_path: Path = None):
+        super().__init__(meta_path)
+        self.switch_threshold = switch_threshold
+
     def allocate_resources(
         self,
         job_id: str,
@@ -401,56 +475,84 @@ class SpatiotemporalShifting(PlanningStrategy):
         nodes: list[str],
         uses_gpu: bool,
     ) -> tuple[list[ConstrainedTimeslot], str]:
-        """Allocate node considering its TDP values and the grid carbon intensity."""
+        """Allocate nodes considering TDP and grid carbon intensity (GCI)."""
         timeslots = timetable.timeslots
-        # Spatial shifting preparation
-        # 'cpu_tdp_box' will store nodes with their corresponding TDP values.
-        # 'blackbox' will store nodes without TDP information.
-        cpu_tdp_box = {}
-        blackbox = []
+        tdp_box, blackbox = {}, []
+
         for node in nodes:
-            cpu_tdp = get_cpu_tdp(hostname=node)
-            if cpu_tdp is not None:
-                cpu_tdp_box.update({node: cpu_tdp})
+            tdp = (
+                (
+                    get_gpu_tdp(node, self._node_meta)
+                    + get_cpu_tdp(node, self._node_meta)
+                )
+                / 2
+                if uses_gpu
+                else get_cpu_tdp(node, self._node_meta)
+            )
+            if tdp is not None:
+                tdp_box[node] = tdp
             else:
                 blackbox.append(node)
-        # Sort nodes in 'cpu_tdp_box' by their TDP values in ascending order.
-        cpu_tdp_sorted_nodes = list(
-            map(lambda x: x[0], sorted(cpu_tdp_box.items(), key=lambda x: x[1]))
-        )
 
-        # Construct list of windows. They are weighted regarding their forecasted carbon impact.
-        fc_hours = len(timeslots)
+        sorted_nodes = sorted(tdp_box.items(), key=lambda x: x[1])
+        load_balance_pools = []
+        curr_pool = []
+        # Group nodes into load-balancing windows based on TDP differences
+        for i, (node, tdp) in enumerate(sorted_nodes):
+            # Add the current node to the pool.
+            curr_pool.append(node)
+            # Calculate the TDP difference to the next node.
+            if i < len(sorted_nodes) - 1:
+                distance_next_tdp = sorted_nodes[i + 1][1] - tdp
+                if distance_next_tdp != 0:
+                    load_balance_pools.append(curr_pool)
+                    curr_pool = []
+            else:
+                load_balance_pools.append(curr_pool)
+        first_pool = load_balance_pools[0]
+
         weighted_windows = {}
-        for start_hour in range(0, fc_hours - hours + 1):
+        # Iterate through timetable (sliding window)
+        for start_hour in range(0, len(timeslots) - hours + 1):
             # Map-reduce to calculate weight of current window
             window = timeslots[start_hour : start_hour + hours]
             # Skip window if there is a full slot in it
-            full_slots = list(filter(lambda x: x.is_full(), window))
-            if len(full_slots) > 0:
+            if any(slot.is_full() for slot in window):
                 continue
             # Calculate weight of window
             window_gcis = list(map(lambda x: x.gci, window))
             weight = reduce(lambda x, y: x + y, window_gcis)
             weighted_windows.update({weight: window})
 
-            # Greedily allocate window with low carbon intensity
-        for _, window in dict(sorted(weighted_windows.items())).items():
-            reserved_ts = []
-            # Reserve node (sorted after ascending TDP)
-            for node in cpu_tdp_sorted_nodes:
+        # Allocate by prioritizing low-GCI windows and using TDP-based load-balancing pools
+        amount_windows = len(weighted_windows)
+        i = 0
+        for gci, window in sorted(weighted_windows.items()):
+            if i > amount_windows * self.switch_threshold:
+                break
+            for node in first_pool:
                 reserved_ts = _reserve_resources(
                     job_id=job_id, window=window, node=node
                 )
                 if reserved_ts:
                     return window, node
-            # Consider node with unknown TDP
-            for node in blackbox:
-                reserved_ts = _reserve_resources(
-                    job_id=job_id, window=window, node=node
-                )
-                if reserved_ts:
-                    return window, node
+            i += 1
+        del i
+        for _, window in sorted(weighted_windows.items()):
+            for pool in load_balance_pools:
+                for node in pool:
+                    reserved_ts = _reserve_resources(
+                        job_id=job_id, window=window, node=node
+                    )
+                    if reserved_ts:
+                        return window, node
+            for _, window in sorted(weighted_windows.items()):
+                for node in blackbox:
+                    reserved_ts = _reserve_resources(
+                        job_id=job_id, window=window, node=node
+                    )
+                    if reserved_ts:
+                        return window, node
         return None, None
 
 

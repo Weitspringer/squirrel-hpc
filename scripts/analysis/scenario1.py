@@ -10,21 +10,21 @@ ZONES = ["IS", "IN-WE", "NO", "AU-NSW", "DE"]
 constres = (
     Config.get_local_paths()["viz_path"]
     / "scenarios"
-    / "scenario1"
+    / "temporal"
     / "constant"
     / "data"
 )
 ascres = (
     Config.get_local_paths()["viz_path"]
     / "scenarios"
-    / "scenario1"
+    / "temporal"
     / "ascending"
     / "data"
 )
 descres = (
     Config.get_local_paths()["viz_path"]
     / "scenarios"
-    / "scenario1"
+    / "temporal"
     / "descending"
     / "data"
 )
