@@ -12,12 +12,14 @@ from sklearn.metrics import root_mean_squared_error, mean_absolute_percentage_er
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
 from src.forecasting.gci import builtin_forecast_gci
+from src.sim.common.pipeline import adjust_plot_font
 
 FC_VIZ_DIRECTORY = Config.get_local_paths()["viz_path"] / "forecasting"
 
 
 def demo(forecast_days: int, lookback_days: int):
     """Live demo of forecast."""
+    adjust_plot_font()
     FC_VIZ_DIRECTORY.mkdir(exist_ok=True, parents=True)
     end_point = datetime.now(tz=UTC)
     start_point = end_point - timedelta(days=lookback_days, hours=1)
@@ -25,14 +27,15 @@ def demo(forecast_days: int, lookback_days: int):
     forecast = builtin_forecast_gci(
         gci_history, days=forecast_days, lookback=lookback_days
     )
-    plt.plot(forecast["time"], forecast["gci"], linewidth=2)
-    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m-%dT%H:%m"))
-    plt.gca().xaxis.set_major_locator(mdates.HourLocator(interval=2))
+    plt.plot(forecast["time"], forecast["gci"], linewidth=3, alpha=0.7)
+    plt.gca().xaxis.set_major_formatter(mdates.DateFormatter("%m-%dT%H"))
     plt.xlabel("Time [UTC]")
     plt.xticks(rotation=45)
-    plt.ylabel("g$\mathregular{CO_2}$-eq./kWh")
+    plt.xlim(forecast["time"].min(), forecast["time"].max())
+    plt.ylabel("g$\mathregular{CO_2}$e/kWh")
     plt.title("Grid Carbon Intensity Forecast")
     plt.grid(axis="y", linewidth=0.5)
+    plt.grid(axis="x", linewidth=0.5)
     plt.tight_layout()
     plt.savefig(FC_VIZ_DIRECTORY / "demo.pdf")
 
