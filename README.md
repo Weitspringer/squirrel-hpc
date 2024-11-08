@@ -88,7 +88,7 @@ squirrel submit [...]
 ├── src                             # Main logic
 │   ├── cluster                     # Slurm cluster functionality
 │   ├── config                      # Configuration logic
-│   ├── data                        # GCI data adapters
+│   ├── data                        # Data adapters (GCI, Timetable)
 │   ├── errors                      # Custom errors
 │   ├── forecasting                 # Builtin forecasting
 │   ├── sched                       # Timeslots, timetable, scheduler
