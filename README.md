@@ -16,19 +16,20 @@ It is a bridge system between the user and Slurm.
 
 ### Simulation
 - Python with **version 3.11** or above.
-- A running **InfluxDB** instance ([self-hosted](https://github.com/influxdata/influxdb) or [cloud](https://www.influxdata.com/get-influxdb/)).
+- Docker Installation
 
 ### Production
 - All of the above.
 - You have access to `sbatch` and the `scontrol` Slurm command.
 
+## Setup
+- Setup a **InfluxDB** instance ([setup tutorial](https://github.com/Weitspringer/squirrel-hpc/wiki/InfluxDB-Setup)).
+- Create a virtual environment which has the requirements from `requirements.txt` installed.
+- Populate InfluxDB with data. See the [guide](https://github.com/Weitspringer/squirrel-hpc/wiki/Grid-Carbon-Intensity-(GCI)-Data) for getting started with grid carbon intensity data.
+
 ## Configuration
 
 See the [wiki page](https://github.com/Weitspringer/squirrel-hpc/wiki/Configuration) for details on configuring Squirrel.
-
-## Setup
-- Create a virtual environment which has the requirements from `requirements.txt` installed.
-- Populate InfluxDB with data. See the [guide](https://github.com/Weitspringer/squirrel-hpc/wiki/Grid-Carbon-Intensity-(GCI)-Data) for getting started with grid carbon intensity data.
 
 ## Usage
 
