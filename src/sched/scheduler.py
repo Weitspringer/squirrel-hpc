@@ -328,7 +328,7 @@ class SpatialShifting(PlanningStrategy):
     """
 
     def __init__(self, balance_grade: int, meta_path: Path = None):
-        super(self.__class__, self).__init__(meta_path)
+        super().__init__(meta_path)
         self.balance_grade = balance_grade
 
     def allocate_resources(

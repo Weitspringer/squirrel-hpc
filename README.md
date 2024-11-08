@@ -94,8 +94,12 @@ squirrel submit [...]
 │   ├── sched                       # Timeslots, timetable, scheduler
 │   ├── sim                         # Simulation logic, scenarios
 │   └── submit                      # Adapters for job submissions
-├── tests                           # Unittests
-└── viz                             # Directory for simulation results etc.
+├── viz                             # Directory for simulation results etc.
+├── .gitignore                      # Specify files for git to ignore
+├── LICENSE                         # License
+├── README.md                       # Readme
+├── requirements.txt                # Python requirements
+└── schedule.csv                    # By default, created when jobs are submitted
 
 ## Testing
 
