@@ -15,7 +15,7 @@ def submit_sbatch(
     """Submit a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
         strategy=SpatiotemporalShifting(),
-        cluster_info=Config.get_local_paths()["sinfo_json"],
+        cluster_info=Config.get_local_paths()["cluster_json"],
     )
     now = datetime.now(tz=UTC)
     timetable = tt_from_csv(start=now)
@@ -48,7 +48,7 @@ def simulate_submit_sbatch(
     """Simulate submitting a Slurm job in a carbon-aware manner."""
     scheduler = Scheduler(
         strategy=SpatiotemporalShifting(),
-        cluster_info=Config.get_local_paths()["sinfo_json"],
+        cluster_info=Config.get_local_paths()["cluster_json"],
     )
     timetable = tt_from_csv(start=submit_date)
     start_timeslot, node = scheduler.schedule_sbatch(

@@ -9,11 +9,12 @@ import pandas as pd
 
 from src.config.squirrel_conf import Config
 from src.data.influxdb import get_gci_data
+from src.sim.common.pipeline import adjust_plot_font
 
 ZONE_LABELS = {
-    "AU-NSW": "Australia (New South Wales)",
-    "CA-ON": "Canada (Ontario)",
-    "CA-QC": "Canada (Québec)",
+    "AU-NSW": "Australia NSW",
+    "CA-ON": "Ontario",
+    "CA-QC": "Québec",
     "DE": "Germany",
     "DK": "Denmark",
     "FR": "France",
@@ -36,6 +37,7 @@ plt.style.use("seaborn-v0_8")
 
 def analyze(zones: list[str]) -> None:
     stats = []
+    adjust_plot_font()
     for zone in zones:
         start = datetime.fromisoformat(f"{YEAR}-01-01T00:00:00+00:00")
         end = datetime.fromisoformat(f"{YEAR}-12-31T23:59:59+00:00")
@@ -82,9 +84,7 @@ def analyze(zones: list[str]) -> None:
             label=ZONE_LABELS[zone],
             markersize=10,
         )
-    plt.title(
-        "[Annually] Properties of GCI Time Series in different Energy Zones, 2023"
-    )
+    plt.title("[Annually] Properties of GCI, 2023")
     plt.xlabel("Average [gCO2e/kWh]")
     plt.ylabel("Coefficient of Variation")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))
@@ -102,7 +102,7 @@ def analyze(zones: list[str]) -> None:
             label=ZONE_LABELS[zone],
             markersize=10,
         )
-    plt.title("[Daily] Properties of GCI Time Series in different Energy Zones, 2023")
+    plt.title("[Daily] Properties of GCI, 2023")
     plt.xlabel("Average [gCO2e/kWh]")
     plt.ylabel("Coefficient of Variation")
     plt.legend(loc="center left", bbox_to_anchor=(1, 0.5))

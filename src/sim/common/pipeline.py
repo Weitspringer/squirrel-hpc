@@ -38,6 +38,20 @@ class JobSubmission:
         self.power_draw_rc = 0  # Read counter for power draws
 
 
+def adjust_plot_font():
+    """Adjust plot font sizes"""
+    small_size = 10
+    medium_size = 12
+    bigger_size = 14
+    plt.rc("font", size=small_size)  # controls default text sizes
+    plt.rc("axes", titlesize=medium_size)  # fontsize of the axes title
+    plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
+    plt.rc("xtick", labelsize=medium_size)  # fontsize of the tick labels
+    plt.rc("ytick", labelsize=medium_size)  # fontsize of the tick labels
+    plt.rc("legend", fontsize=medium_size)  # legend fontsize
+    plt.rc("figure", titlesize=bigger_size)  # fontsize of the figure title
+
+
 def _sim_schedule(
     strategy: PlanningStrategy,
     gci_data: pd.DataFrame,
@@ -307,16 +321,7 @@ def plot(
     """Visualize scenario results."""
     # pylint: disable=anomalous-backslash-in-string
 
-    small_size = 10
-    medium_size = 12
-    bigger_size = 14
-    plt.rc("font", size=small_size)  # controls default text sizes
-    plt.rc("axes", titlesize=medium_size)  # fontsize of the axes title
-    plt.rc("axes", labelsize=medium_size)  # fontsize of the x and y labels
-    plt.rc("xtick", labelsize=medium_size)  # fontsize of the tick labels
-    plt.rc("ytick", labelsize=medium_size)  # fontsize of the tick labels
-    plt.rc("legend", fontsize=medium_size)  # legend fontsize
-    plt.rc("figure", titlesize=small_size)  # fontsize of the figure title
+    adjust_plot_font()
 
     ### Load result data
     data_dir = result_dir / "data"
@@ -446,7 +451,7 @@ def plot(
     if max_v < 35:
         max_v = 35
     plt.ylim(h_lim, max_v)
-    plt.ylabel("g$\mathregular{CO_2}$-eq. Savings")
+    plt.ylabel("g$\mathregular{CO_2}$e Savings")
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
     plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=5))
     plt.grid(axis="y", linewidth=1, alpha=0.5)
@@ -496,7 +501,7 @@ def plot(
         )
     plt.locator_params(axis="x", nbins=12)
     plt.gca().axes.set_axisbelow(True)
-    plt.ylabel("Mean $\mathregular{CO_2}$-eq. Saved")
+    plt.ylabel("Mean $\mathregular{CO_2}$e Saved")
     plt.xlabel("Workload Submission Time")
     plt.xlim(0, 23.9)
     if min_v < 0:
@@ -534,7 +539,7 @@ def plot(
     plt.gca().axes.set_axisbelow(True)
     plt.gca().yaxis.set_major_formatter(ticker.PercentFormatter(xmax=100, decimals=0))
     plt.gca().yaxis.set_major_locator(ticker.MultipleLocator(base=10))
-    plt.ylabel("Mean g$\mathregular{CO_2}$-eq. Saved")
+    plt.ylabel("Mean g$\mathregular{CO_2}$e Saved")
     if min_v < 0:
         h_lim = min_v - 1
         plt.axhspan(0, h_lim, color="tab:red", alpha=0.1, zorder=-100)
@@ -562,6 +567,7 @@ def plot_year_gci(year: str, zones_dict: list[dict], save_path: Path):
     """Plot median GCI in the given year for each hour of the day."""
     # pylint: disable=anomalous-backslash-in-string
 
+    adjust_plot_font()
     ### Dynamically set unique colors for zones
     save_path.parent.mkdir(parents=True, exist_ok=True)
     zones = sorted([x.get("name") for x in zones_dict])

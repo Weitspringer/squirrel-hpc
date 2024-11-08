@@ -5,7 +5,7 @@ from typing_extensions import Annotated
 
 import typer
 
-from scripts.emaps_to_influx import ingest_emaps_history
+from src.data.influxdb import ingest_emaps_history
 
 app = typer.Typer()
 
