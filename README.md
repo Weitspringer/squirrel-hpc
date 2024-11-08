@@ -2,15 +2,15 @@
 <div align="center">
 <img src="assets\logo-500px.png" alt="drawing" width="150"/>
 </div>
-Squirrel is a carbon-aware scheduler for Slurm batch jobs.
+Squirrel is a carbon-aware scheduler for Slurm batch jobs. It is a bridge system between the user and Slurm.
 
-It is a bridge system between the user and Slurm.
+We propose three scheduling algorithms considering the grid carbon intensity (GCI) and servers' thermal design power (TDP) values.
 
 ## Key Features
 - **Temporal shifting** based on the energy zone of the data center.
 - Intra-datacenter **spatial shifting** based on the nodes' TDP of CPUs and GPUs you provide.
-- Change scheduling strategies at runtime.
 - Built-in, configurable forecasting based on historical data.
+- Integration of any forecasting data.
 
 ## Prerequisites
 
