@@ -76,6 +76,7 @@ squirrel submit [...]
 ```
 
 ## Project Structure
+```bash
 .
 ├── assets                          # Assets
 ├── cli                             # Typer CLI
@@ -100,7 +101,7 @@ squirrel submit [...]
 ├── README.md                       # Readme
 ├── requirements.txt                # Python requirements
 └── schedule.csv                    # By default, created when jobs are submitted
-
+```
 ## Testing
 
 ```bash
